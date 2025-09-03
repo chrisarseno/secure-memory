@@ -295,6 +295,71 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any) {
         });
       }
     });
+
+    // Self-learning endpoints
+    router.post("/api/nexus/learning/start", async (req: Request, res: Response) => {
+      try {
+        const result = await localNexusSystem.startAutonomousLearning();
+        res.json(result);
+      } catch (error) {
+        res.status(500).json({
+          error: "Failed to start autonomous learning",
+          details: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    });
+
+    router.get("/api/nexus/learning/stats", async (req: Request, res: Response) => {
+      try {
+        const stats = await localNexusSystem.getLearningStats();
+        res.json(stats);
+      } catch (error) {
+        res.status(500).json({
+          error: "Failed to get learning stats",
+          details: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    });
+
+    router.post("/api/nexus/training/start", async (req: Request, res: Response) => {
+      try {
+        const result = await localNexusSystem.startIncrementalTraining();
+        res.json(result);
+      } catch (error) {
+        res.status(500).json({
+          error: "Failed to start incremental training",
+          details: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    });
+
+    router.post("/api/nexus/learning/experience", async (req: Request, res: Response) => {
+      try {
+        const { taskType, input, expectedOutput, actualOutput, feedback, context } = req.body;
+        await localNexusSystem.recordLearningExperience(
+          taskType, input, expectedOutput, actualOutput, feedback, context
+        );
+        res.json({ success: true });
+      } catch (error) {
+        res.status(500).json({
+          error: "Failed to record learning experience",
+          details: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    });
+
+    router.post("/api/nexus/goal/enhanced", async (req: Request, res: Response) => {
+      try {
+        const { goal, context, computeBudget } = req.body;
+        const result = await localNexusSystem.executeGoalWithLearning(goal, context, computeBudget);
+        res.json(result);
+      } catch (error) {
+        res.status(500).json({
+          error: "Failed to execute enhanced goal",
+          details: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    });
   }
 
   return router;

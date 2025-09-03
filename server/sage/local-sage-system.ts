@@ -6,6 +6,7 @@
 import { LocalAIService } from './local-ai-service';
 import { KnowledgeGraphEngine } from './knowledge-graph';
 import { SourceReputationEngine } from './source-reputation';
+import { SelfLearningAgent } from './self-learning-agent';
 import { IStorage } from '../storage';
 
 export interface LocalTask {
@@ -592,6 +593,7 @@ export class LocalNEXUSSystem {
   private knowledgeBase: LocalKnowledgeBase;
   private knowledgeGraph: KnowledgeGraphEngine;
   private sourceReputation: SourceReputationEngine;
+  private selfLearningAgent: SelfLearningAgent;
   private storage: IStorage;
 
   constructor(storage: IStorage) {
@@ -604,6 +606,7 @@ export class LocalNEXUSSystem {
     this.knowledgeBase = new LocalKnowledgeBase(storage);
     this.knowledgeGraph = new KnowledgeGraphEngine(storage, this.localAI);
     this.sourceReputation = new SourceReputationEngine(storage, this.localAI);
+    this.selfLearningAgent = new SelfLearningAgent(storage, this.localAI, this.knowledgeGraph);
   }
 
   async executeGoal(goal: string, context: any = {}, computeBudget: number = 60000): Promise<{
@@ -878,5 +881,117 @@ export class LocalNEXUSSystem {
 
   async getReputationMetrics() {
     return this.sourceReputation.getReputationMetrics();
+  }
+
+  // Self-learning methods
+  async startAutonomousLearning() {
+    return await this.selfLearningAgent.startLearningCycle();
+  }
+
+  async recordLearningExperience(
+    taskType: string,
+    input: string,
+    expectedOutput: string,
+    actualOutput: string,
+    feedback: string,
+    context: any
+  ) {
+    return await this.selfLearningAgent.recordLearningExperience(
+      taskType, input, expectedOutput, actualOutput, feedback, context
+    );
+  }
+
+  async getLearningStats() {
+    return this.selfLearningAgent.getLearningStats();
+  }
+
+  async startIncrementalTraining() {
+    try {
+      const { IncrementalTrainingEngine } = await import('./incremental-training');
+      const trainingEngine = new IncrementalTrainingEngine(
+        this.storage, 
+        this.localAI, 
+        this.selfLearningAgent
+      );
+      
+      return await trainingEngine.startIncrementalTraining();
+    } catch (error) {
+      console.error('Failed to start incremental training:', error);
+      return null;
+    }
+  }
+
+  // Enhanced goal execution with learning integration
+  async executeGoalWithLearning(goal: string, context: any = {}, computeBudget: number = 60000): Promise<{
+    tasks: LocalTask[];
+    results: LocalExecutionResult[];
+    verifiedFacts: LocalKnowledgeFact[];
+    needsHumanReview: string[];
+    totalCost: number;
+    systemMetrics: any;
+    learningExperiences: number;
+    performanceImprovement: number;
+  }> {
+    console.log(`🧠 Enhanced goal execution with learning: ${goal}`);
+
+    // Execute normal goal processing
+    const standardResult = await this.executeGoal(goal, context, computeBudget);
+
+    // Record learning experiences from the execution
+    let learningExperiences = 0;
+    for (const result of standardResult.results) {
+      try {
+        await this.recordLearningExperience(
+          result.taskId,
+          goal,
+          'successful_completion',
+          result.content,
+          `Task completed with ${result.confidence} confidence`,
+          {
+            domain: this.inferDomain(result.content),
+            difficulty: result.computeCost > 1000 ? 'hard' : 'medium',
+            novelty: result.confidence < 0.8 ? 0.7 : 0.3,
+            importance: result.confidence * 0.8
+          }
+        );
+        learningExperiences++;
+      } catch (error) {
+        console.warn('Failed to record learning experience:', error);
+      }
+    }
+
+    // Trigger autonomous learning if enough experiences accumulated
+    let performanceImprovement = 0;
+    if (learningExperiences > 2) {
+      try {
+        const learningResult = await this.startAutonomousLearning();
+        performanceImprovement = learningResult.improvementsAchieved / learningResult.gapsIdentified;
+        
+        console.log(`📈 Learning triggered: ${learningResult.gapsIdentified} gaps, ${learningResult.improvementsAchieved} improvements`);
+      } catch (error) {
+        console.warn('Autonomous learning failed:', error);
+      }
+    }
+
+    return {
+      ...standardResult,
+      learningExperiences,
+      performanceImprovement
+    };
+  }
+
+  // Helper method to infer domain from content
+  private inferDomain(content: string): string {
+    const lowerContent = content.toLowerCase();
+    
+    if (lowerContent.includes('math') || lowerContent.includes('calculation') || lowerContent.includes('number')) {
+      return 'reasoning';
+    } else if (lowerContent.includes('creative') || lowerContent.includes('story') || lowerContent.includes('metaphor')) {
+      return 'creative';
+    } else if (lowerContent.includes('fact') || lowerContent.includes('capital') || lowerContent.includes('date')) {
+      return 'factual';
+    } else {
+      return 'general';
+    }
   }
 }

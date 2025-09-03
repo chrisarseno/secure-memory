@@ -6,6 +6,7 @@ import ActivityFeed from "@/components/activity-feed";
 import SafetyMonitor from "@/components/safety-monitor";
 import KnowledgeGraphVisualization from "@/components/knowledge-graph-viz";
 import AICollaboration from "@/components/ai-collaboration";
+import { SelfLearningPanel } from "@/components/self-learning-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { initializeSocket, getSocket } from "@/lib/socket";
@@ -212,6 +213,11 @@ export default function Dashboard() {
               <AICollaboration />
               <SafetyMonitor />
             </div>
+          </div>
+          
+          {/* Self-Learning Agent */}
+          <div className="mt-8">
+            <SelfLearningPanel />
           </div>
           
           {/* Knowledge Graph Preview */}
