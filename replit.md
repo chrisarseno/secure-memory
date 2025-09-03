@@ -1,6 +1,6 @@
 # Overview
 
-This is a REST Express application featuring an advanced AI consciousness platform with sophisticated multi-modal capabilities. The project implements a comprehensive ensemble intelligence system with React frontend, Express backend, PostgreSQL database, and extensive AI/ML features including autonomous learning, creative reasoning, and consciousness monitoring. The architecture supports both local and cloud-based AI model integration with advanced safety and ethical oversight systems.
+This is a REST Express application featuring the NEXUS (NEXUS Unified System) - an advanced local AI ensemble platform with sophisticated multi-modal capabilities. The project implements a comprehensive self-learning ensemble intelligence system with React frontend, Express backend, PostgreSQL database, and extensive local AI/ML features including autonomous learning, curriculum-driven education, and human-in-the-loop collaboration. The architecture supports 100% local AI model integration with no external API dependencies, advanced safety systems, and ethical oversight.
 
 # User Preferences
 

@@ -62,7 +62,7 @@ export default function Dashboard() {
               <i className="fas fa-brain text-primary-foreground text-sm"></i>
             </div>
             <div>
-              <h1 className="text-lg font-semibold">SAGE System</h1>
+              <h1 className="text-lg font-semibold">NEXUS System</h1>
               <p className="text-xs text-muted-foreground">v2.1.0</p>
             </div>
           </div>
@@ -100,9 +100,9 @@ export default function Dashboard() {
               <i className="fas fa-tachometer-alt w-4"></i>
               Dashboard
             </a>
-            <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-sm" data-testid="nav-sage-core">
+            <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-sm" data-testid="nav-nexus-core">
               <i className="fas fa-brain w-4"></i>
-              SAGE Core
+              NEXUS Core
             </a>
             <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-sm" data-testid="nav-knowledge">
               <i className="fas fa-project-diagram w-4"></i>

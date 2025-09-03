@@ -3,7 +3,7 @@ import { IStorage } from "./storage";
 import { insertActivityEventSchema, insertCollaborationMessageSchema, emergencyActionSchema } from "../shared/schema";
 import { z } from "zod";
 
-export function createRoutes(storage: IStorage, localSageSystem?: any) {
+export function createRoutes(storage: IStorage, localNexusSystem?: any) {
   const router = express.Router();
 
   // Consciousness Modules
@@ -150,44 +150,44 @@ export function createRoutes(storage: IStorage, localSageSystem?: any) {
   });
 
 
-  // Local SAGE Endpoints
-  if (localSageSystem) {
-    router.post("/api/sage/execute", async (req: Request, res: Response) => {
+  // Local NEXUS Endpoints
+  if (localNexusSystem) {
+    router.post("/api/nexus/execute", async (req: Request, res: Response) => {
       try {
         const { goal, context, computeBudget } = req.body;
-        const result = await localSageSystem.executeGoal(
+        const result = await localNexusSystem.executeGoal(
           goal || "Analyze current system state",
           context || {},
           computeBudget || 60000
         );
         res.json(result);
       } catch (error) {
-        res.status(500).json({ error: "Local SAGE execution failed", details: error instanceof Error ? error.message : "Unknown error" });
+        res.status(500).json({ error: "Local NEXUS execution failed", details: error instanceof Error ? error.message : "Unknown error" });
       }
     });
 
-    router.get("/api/sage/costs", async (req: Request, res: Response) => {
+    router.get("/api/nexus/costs", async (req: Request, res: Response) => {
       try {
-        const totalCost = localSageSystem.getTotalCost();
-        const hourlyCost = localSageSystem.getHourlyCostRate();
+        const totalCost = localNexusSystem.getTotalCost();
+        const hourlyCost = localNexusSystem.getHourlyCostRate();
         res.json({ totalCost, hourlyCost });
       } catch (error) {
         res.status(500).json({ error: "Failed to get local cost data" });
       }
     });
 
-    router.get("/api/sage/metrics", async (req: Request, res: Response) => {
+    router.get("/api/nexus/metrics", async (req: Request, res: Response) => {
       try {
-        const metrics = await localSageSystem.getLocalMetrics();
+        const metrics = await localNexusSystem.getLocalMetrics();
         res.json(metrics);
       } catch (error) {
-        res.status(500).json({ error: "Failed to get SAGE metrics" });
+        res.status(500).json({ error: "Failed to get NEXUS metrics" });
       }
     });
 
-    router.get("/api/sage/knowledge", async (req: Request, res: Response) => {
+    router.get("/api/nexus/knowledge", async (req: Request, res: Response) => {
       try {
-        const knowledgeBase = await localSageSystem.getKnowledgeBase();
+        const knowledgeBase = await localNexusSystem.getKnowledgeBase();
         const query = req.query.query as string;
         const facts = await knowledgeBase.getFacts(query);
         res.json(facts);
@@ -196,9 +196,9 @@ export function createRoutes(storage: IStorage, localSageSystem?: any) {
       }
     });
 
-    router.post("/api/sage/learn", async (req: Request, res: Response) => {
+    router.post("/api/nexus/learn", async (req: Request, res: Response) => {
       try {
-        const learningCycle = await localSageSystem.initiateLearningCycle();
+        const learningCycle = await localNexusSystem.initiateLearningCycle();
         res.json({
           success: true,
           ...learningCycle,
@@ -212,10 +212,10 @@ export function createRoutes(storage: IStorage, localSageSystem?: any) {
       }
     });
 
-    router.post("/api/sage/learn/task/:taskId", async (req: Request, res: Response) => {
+    router.post("/api/nexus/learn/task/:taskId", async (req: Request, res: Response) => {
       try {
         const { taskId } = req.params;
-        const result = await localSageSystem.executeLearningTask(taskId);
+        const result = await localNexusSystem.executeLearningTask(taskId);
         res.json(result);
       } catch (error) {
         res.status(500).json({

@@ -1,5 +1,5 @@
 /**
- * Local SAGE System - Complete self-contained ensemble intelligence
+ * Local NEXUS System - Complete self-contained ensemble intelligence
  * No external API dependencies - runs entirely on local infrastructure
  */
 
@@ -581,7 +581,7 @@ export class LocalKnowledgeBase {
 /**
  * LOCAL SAGE SYSTEM: Complete local ensemble intelligence
  */
-export class LocalSAGESystem {
+export class LocalNEXUSSystem {
   private localAI: LocalAIService;
   private planner: LocalTaskPlanner;
   private router: LocalTaskRouter;
