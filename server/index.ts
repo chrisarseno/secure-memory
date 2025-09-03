@@ -5,6 +5,7 @@ import cors from "cors";
 import { MemStorage } from "./storage";
 import { createRoutes } from "./routes";
 import { setupVite } from "./vite";
+import { ConsciousnessSystem } from "./ai/consciousness-integration";
 
 const app = express();
 const server = createServer(app);
@@ -16,12 +17,13 @@ const io = new SocketIOServer(server, {
 });
 
 const storage = new MemStorage();
+const consciousnessSystem = new ConsciousnessSystem(storage);
 
 app.use(cors());
 app.use(express.json());
 
 // API Routes
-app.use(createRoutes(storage));
+app.use(createRoutes(storage, consciousnessSystem));
 
 // WebSocket for real-time updates
 io.on("connection", (socket) => {
@@ -99,7 +101,16 @@ if (process.env.NODE_ENV !== "production") {
   setupVite(app, server);
 }
 
-const PORT = process.env.PORT || 3000;
+// Start autonomous consciousness learning
+consciousnessSystem.startAutonomousLearning().then(() => {
+  console.log("🧠 Autonomous consciousness learning started");
+}).catch(error => {
+  console.error("Failed to start consciousness learning:", error);
+});
+
+const PORT = process.env.PORT || 5000;
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Consciousness System running on http://0.0.0.0:${PORT}`);
+  console.log(`💰 Real-time cost tracking enabled`);
+  console.log(`🤖 OpenAI integration active`);
 });

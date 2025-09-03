@@ -112,3 +112,42 @@ export const emergencyActionSchema = z.object({
 });
 
 export type EmergencyAction = z.infer<typeof emergencyActionSchema>;
+
+// Cost Tracking
+export const costTrackingSchema = z.object({
+  id: z.string(),
+  timestamp: z.string(),
+  service: z.string(), // "openai", "compute", etc.
+  endpoint: z.string().optional(), // API endpoint called
+  model: z.string().optional(), // AI model used
+  tokens: z.number().optional(), // tokens consumed
+  cost: z.number(), // actual cost in USD
+  requestType: z.string(), // "chat", "completion", "embedding", etc.
+  details: z.record(z.union([z.string(), z.number()])).optional(),
+});
+
+export const insertCostTrackingSchema = costTrackingSchema.omit({
+  id: true,
+  timestamp: true,
+});
+
+export type CostTracking = z.infer<typeof costTrackingSchema>;
+export type InsertCostTracking = z.infer<typeof insertCostTrackingSchema>;
+
+// Conversation Memory
+export const conversationMemorySchema = z.object({
+  id: z.string(),
+  sessionId: z.string(),
+  role: z.enum(["user", "assistant", "system"]),
+  content: z.string(),
+  timestamp: z.string(),
+  metadata: z.record(z.union([z.string(), z.number()])).optional(),
+});
+
+export const insertConversationMemorySchema = conversationMemorySchema.omit({
+  id: true,
+  timestamp: true,
+});
+
+export type ConversationMemory = z.infer<typeof conversationMemorySchema>;
+export type InsertConversationMemory = z.infer<typeof insertConversationMemorySchema>;

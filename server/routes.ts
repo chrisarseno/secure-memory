@@ -3,7 +3,7 @@ import { IStorage } from "./storage";
 import { insertActivityEventSchema, insertCollaborationMessageSchema, emergencyActionSchema } from "../shared/schema";
 import { z } from "zod";
 
-export function createRoutes(storage: IStorage) {
+export function createRoutes(storage: IStorage, consciousnessSystem?: any) {
   const router = express.Router();
 
   // Consciousness Modules
@@ -148,6 +148,29 @@ export function createRoutes(storage: IStorage) {
       res.status(500).json({ error: "Failed to fetch emergency history" });
     }
   });
+
+
+  // AI Consciousness Endpoints
+  if (consciousnessSystem) {
+    router.post("/api/ai/analyze", async (req: Request, res: Response) => {
+      try {
+        const analysis = await consciousnessSystem.analyzeSystemState();
+        res.json(analysis);
+      } catch (error) {
+        res.status(500).json({ error: "AI analysis failed", details: error instanceof Error ? error.message : "Unknown error" });
+      }
+    });
+
+    router.get("/api/ai/costs", async (req: Request, res: Response) => {
+      try {
+        const totalCost = consciousnessSystem.getTotalCost();
+        const hourlyCost = consciousnessSystem.getHourlyCostRate();
+        res.json({ totalCost, hourlyCost });
+      } catch (error) {
+        res.status(500).json({ error: "Failed to get cost data" });
+      }
+    });
+  }
 
   return router;
 }

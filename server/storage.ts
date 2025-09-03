@@ -30,9 +30,15 @@ export interface IStorage {
   // Emergency Actions
   executeEmergencyAction(action: Omit<EmergencyAction, 'timestamp'>): Promise<EmergencyAction>;
   getEmergencyHistory(): Promise<EmergencyAction[]>;
+  
+  // Cost Tracking
+  addCostEntry(cost: { service: string; endpoint?: string; model?: string; tokens?: number; cost: number; requestType: string; details?: Record<string, string | number>; }): Promise<void>;
+  getCostHistory(hours: number): Promise<any[]>;
+  getTotalCost(hours: number): Promise<number>;
 }
 
 export class MemStorage implements IStorage {
+  private costEntries: Array<{ id: string; timestamp: string; service: string; endpoint?: string; model?: string; tokens?: number; cost: number; requestType: string; details?: Record<string, string | number>; }> = [];
   private modules: Map<string, ConsciousnessModule> = new Map();
   private metrics: SystemMetrics[] = [];
   private activities: ActivityEvent[] = [];
@@ -90,7 +96,7 @@ export class MemStorage implements IStorage {
         status: "active" as const,
         integrationLevel: 84,
         load: 52,
-        metrics: { "characterScore": 84, "wisdomLevel": "High" },
+        metrics: { "characterScore": 84, "wisdomLevel": 8 },
         lastUpdated: new Date().toISOString(),
       },
       {
