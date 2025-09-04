@@ -2,9 +2,11 @@ import express, { type Request, Response } from "express";
 import { IStorage } from "./storage";
 import { insertActivityEventSchema, insertCollaborationMessageSchema, emergencyActionSchema } from "../shared/schema";
 import { z } from "zod";
+import { requireAuth } from "./auth";
 
 export function createRoutes(storage: IStorage, localNexusSystem?: any) {
   const router = express.Router();
+
 
   // Consciousness Modules
   router.get("/api/modules", async (req: Request, res: Response) => {

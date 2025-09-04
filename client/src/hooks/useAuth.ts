@@ -16,8 +16,15 @@ export function useAuth() {
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ['auth', 'user'],
     queryFn: async () => {
-      const response = await apiRequest('/api/auth/user');
-      return response;
+      try {
+        const response = await apiRequest('GET', '/api/auth/user');
+        return await response.json();
+      } catch (error: any) {
+        if (error.message?.includes('401')) {
+          return null; // Not authenticated
+        }
+        throw error;
+      }
     },
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
