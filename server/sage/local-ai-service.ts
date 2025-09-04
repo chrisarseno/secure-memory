@@ -224,9 +224,79 @@ export class LocalAIService {
       }
       return false;
     } catch (error) {
-      console.log('ℹ️  Ollama not available');
-      return false;
+      // Try connecting to remote Ollama API
+      return await this.checkRemoteOllama();
     }
+  }
+
+  private async checkRemoteOllama(): Promise<boolean> {
+    const ollamaEndpoints = [
+      'http://localhost:11434',  // Default Ollama port
+      process.env.OLLAMA_HOST || '',  // Custom endpoint from env
+    ].filter(Boolean);
+
+    for (const endpoint of ollamaEndpoints) {
+      try {
+        console.log(`🔍 Checking Ollama API at ${endpoint}...`);
+        
+        // Try to fetch model list from Ollama API
+        const response = await fetch(`${endpoint}/api/tags`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(5000) // 5 second timeout
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.models && data.models.length > 0) {
+            console.log(`🤖 Found ${data.models.length} Ollama models at ${endpoint}:`);
+            
+            for (const modelInfo of data.models) {
+              const modelName = modelInfo.name;
+              console.log(`  - ${modelName}`);
+              
+              // Update existing models or add new ones
+              const baseModelName = modelName.split(':')[0]; // Remove tag
+              let found = false;
+              
+              for (const [id, model] of Array.from(this.availableModels.entries())) {
+                if (baseModelName.toLowerCase().includes(model.name.toLowerCase().replace(/\s+/g, '')) ||
+                    model.name.toLowerCase().replace(/\s+/g, '').includes(baseModelName.toLowerCase())) {
+                  model.status = 'ready';
+                  model.type = 'ollama';
+                  console.log(`  ✅ ${model.name} ready (Remote Ollama)`);
+                  found = true;
+                  break;
+                }
+              }
+              
+              // Add new model if not found in defaults
+              if (!found) {
+                const newModel: LocalModelInfo = {
+                  id: `ollama-${baseModelName}`,
+                  name: modelName,
+                  type: 'ollama',
+                  capabilities: ['conversation', 'reasoning'],
+                  memoryMB: 4096, // Default estimate
+                  status: 'ready',
+                  specialized: 'reasoning'
+                };
+                this.availableModels.set(newModel.id, newModel);
+                console.log(`  ➕ Added new model: ${modelName}`);
+              }
+            }
+            
+            return true;
+          }
+        }
+      } catch (error) {
+        // Continue to next endpoint
+        continue;
+      }
+    }
+    
+    console.log('ℹ️  Ollama not available locally or remotely');
+    return false;
   }
 
   private async checkJanModels(): Promise<boolean> {

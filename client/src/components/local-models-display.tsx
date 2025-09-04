@@ -83,8 +83,10 @@ export default function LocalModelsDisplay() {
           <div className="text-center py-8">
             <Cpu className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <div className="text-muted-foreground mb-2">No local models detected</div>
-            <div className="text-sm text-muted-foreground">
-              Ollama and Jan models are currently not available in this environment
+            <div className="text-sm text-muted-foreground space-y-2">
+              <div>• This app is running in the cloud and can't directly access your local Ollama/Jan models</div>
+              <div>• To connect your local models, you can expose Ollama API on port 11434</div>
+              <div>• Or set OLLAMA_HOST environment variable to your model server URL</div>
             </div>
           </div>
         ) : (
