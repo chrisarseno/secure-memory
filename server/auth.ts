@@ -22,6 +22,12 @@ declare global {
   }
 }
 
+declare module 'express-session' {
+  interface SessionData {
+    usernameVerified?: boolean;
+  }
+}
+
 export function setupAuth(app: Express) {
   // Session middleware
   app.use(session({
@@ -124,10 +130,24 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Auth routes
-  app.get('/api/auth/google', 
-    passport.authenticate('google', { scope: ['profile', 'email'] })
-  );
+  // Username verification endpoint
+  app.post('/api/auth/verify-username', (req, res) => {
+    const { username } = req.body;
+    if (username === 'chris.mwd20') {
+      req.session.usernameVerified = true;
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ error: 'Invalid username' });
+    }
+  });
+
+  // Modified Google auth to check username verification
+  app.get('/api/auth/google', (req, res, next) => {
+    if (!req.session.usernameVerified) {
+      return res.status(401).json({ error: 'Username verification required' });
+    }
+    passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+  });
 
   app.get('/api/auth/google/callback',
     passport.authenticate('google', { failureRedirect: '/login?error=auth_failed' }),

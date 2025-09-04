@@ -2,6 +2,7 @@ import { Route, Switch } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import Dashboard from "@/pages/dashboard";
+import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
 import ConsciousnessCore from "@/pages/consciousness-core";
 import KnowledgeGraph from "@/pages/knowledge-graph";
@@ -35,8 +36,8 @@ function AppContent() {
         {!isAuthenticated ? (
           <>
             <Route path="/login" component={LoginPage} />
-            <Route path="/" component={LoginPage} />
-            <Route component={LoginPage} />
+            <Route path="/" component={LandingPage} />
+            <Route component={LandingPage} />
           </>
         ) : (
           <>
