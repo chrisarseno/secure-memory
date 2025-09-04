@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { initializeSocket, getSocket } from "@/lib/socket";
 import { Bell, DollarSign } from "lucide-react";
+import type { ConsciousnessModule } from "../../../shared/schema";
 
 export default function Dashboard() {
   const [realTimeMetrics, setRealTimeMetrics] = useState<any>(null);
@@ -43,7 +44,7 @@ export default function Dashboard() {
   }, []);
 
   // Fetch initial data
-  const { data: modules } = useQuery({
+  const { data: modules } = useQuery<ConsciousnessModule[]>({
     queryKey: ['/api/modules'],
     refetchInterval: 30000, // Refetch every 30 seconds
   });
@@ -266,8 +267,9 @@ export default function Dashboard() {
         <div className="flex-1 overflow-auto p-6">
           {/* Tab-based content rendering */}
           {activeTab === "dashboard" && (
-          {/* Critical Metrics Row */}
-          <ConsciousnessMetrics metrics={currentMetrics} />
+            <>
+              {/* Critical Metrics Row */}
+              <ConsciousnessMetrics metrics={currentMetrics} />
           
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
@@ -295,8 +297,9 @@ export default function Dashboard() {
             <ConsciousnessContinuityPanel />
           </div>
           
-          {/* Knowledge Graph Preview */}
-          <KnowledgeGraphVisualization />
+              {/* Knowledge Graph Preview */}
+              <KnowledgeGraphVisualization />
+            </>
           )}
           
           {/* Other tabs show simple messages for now */}
