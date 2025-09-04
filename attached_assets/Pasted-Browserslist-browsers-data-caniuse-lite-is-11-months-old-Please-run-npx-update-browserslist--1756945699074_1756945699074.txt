@@ -1,0 +1,67 @@
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+❌ Failed to handle consciousness update: Error: Module safety_monitor not found
+    at DatabaseStorage.updateModule (/home/runner/workspace/server/database-storage.ts:184:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConsciousnessBridge.handleConsciousnessUpdate (/home/runner/workspace/server/consciousness-bridge.ts:87:7)
+❌ Failed to handle consciousness update: Error: Module consciousness_core not found
+    at DatabaseStorage.updateModule (/home/runner/workspace/server/database-storage.ts:184:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConsciousnessBridge.handleConsciousnessUpdate (/home/runner/workspace/server/consciousness-bridge.ts:87:7)
+❌ Failed to handle consciousness update: Error: Module consciousness_manager not found
+    at DatabaseStorage.updateModule (/home/runner/workspace/server/database-storage.ts:184:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConsciousnessBridge.handleConsciousnessUpdate (/home/runner/workspace/server/consciousness-bridge.ts:87:7)
+❌ Failed to handle consciousness update: Error: Module safety_monitor not found
+    at DatabaseStorage.updateModule (/home/runner/workspace/server/database-storage.ts:184:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConsciousnessBridge.handleConsciousnessUpdate (/home/runner/workspace/server/consciousness-bridge.ts:87:7)
+❌ Failed to handle consciousness update: Error: Module safety_monitor not found
+    at DatabaseStorage.updateModule (/home/runner/workspace/server/database-storage.ts:184:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConsciousnessBridge.handleConsciousnessUpdate (/home/runner/workspace/server/consciousness-bridge.ts:87:7)
+❌ Failed to handle consciousness update: Error: Module consciousness_core not found
+    at DatabaseStorage.updateModule (/home/runner/workspace/server/database-storage.ts:184:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConsciousnessBridge.handleConsciousnessUpdate (/home/runner/workspace/server/consciousness-bridge.ts:87:7)
+❌ Failed to handle consciousness update: Error: Module consciousness_manager not found
+    at DatabaseStorage.updateModule (/home/runner/workspace/server/database-storage.ts:184:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConsciousnessBridge.handleConsciousnessUpdate (/home/runner/workspace/server/consciousness-bridge.ts:87:7)
+❌ Failed to handle consciousness update: Error: Module safety_monitor not found
+    at DatabaseStorage.updateModule (/home/runner/workspace/server/database-storage.ts:184:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConsciousnessBridge.handleConsciousnessUpdate (/home/runner/workspace/server/consciousness-bridge.ts:87:7)
+❌ Failed to handle consciousness update: Error: Module consciousness_core not found
+    at DatabaseStorage.updateModule (/home/runner/workspace/server/database-storage.ts:184:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConsciousnessBridge.handleConsciousnessUpdate (/home/runner/workspace/server/consciousness-bridge.ts:87:7)
+❌ Failed to handle consciousness update: Error: Module safety_monitor not found
+    at DatabaseStorage.updateModule (/home/runner/workspace/server/database-storage.ts:184:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConsciousnessBridge.handleConsciousnessUpdate (/home/runner/workspace/server/consciousness-bridge.ts:87:7)
+❌ Failed to handle consciousness update: Error: Module consciousness_manager not found
+    at DatabaseStorage.updateModule (/home/runner/workspace/server/database-storage.ts:184:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConsciousnessBridge.handleConsciousnessUpdate (/home/runner/workspace/server/consciousness-bridge.ts:87:7)
+❌ Failed to handle consciousness update: Error: Module safety_monitor not found
+    at DatabaseStorage.updateModule (/home/runner/workspace/server/database-storage.ts:184:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConsciousnessBridge.handleConsciousnessUpdate (/home/runner/workspace/server/consciousness-bridge.ts:87:7)
+❌ Failed to handle consciousness update: Error: Module consciousness_core not found
+    at DatabaseStorage.updateModule (/home/runner/workspace/server/database-storage.ts:184:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConsciousnessBridge.handleConsciousnessUpdate (/home/runner/workspace/server/consciousness-bridge.ts:87:7)
+❌ Failed to handle consciousness update: Error: Module consciousness_manager not found
+    at DatabaseStorage.updateModule (/home/runner/workspace/server/database-storage.ts:184:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConsciousnessBridge.handleConsciousnessUpdate (/home/runner/workspace/server/consciousness-bridge.ts:87:7)
+❌ Failed to handle consciousness update: Error: Module safety_monitor not found
+    at DatabaseStorage.updateModule (/home/runner/workspace/server/database-storage.ts:184:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConsciousnessBridge.handleConsciousnessUpdate (/home/runner/workspace/server/consciousness-bridge.ts:87:7)
+❌ Failed to handle consciousness update: Error: Module safety_monitor not found
+    at DatabaseStorage.updateModule (/home/runner/workspace/server/database-storage.ts:184:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConsciousnessBridge.handleConsciousnessUpdate (/home/runner/workspace/server/consciousness-bridge.ts:87:7)
