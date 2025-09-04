@@ -65,6 +65,30 @@ export class DatabaseStorage implements IStorage {
             integrationLevel: 91,
             load: 68,
             metrics: { "noveltyScore": 91, "conceptsGenerated": 1247 } as Record<string, string | number>,
+          },
+          {
+            id: "consciousness_core",
+            name: "Consciousness Core",
+            status: "active" as const,
+            integrationLevel: 96,
+            load: 85,
+            metrics: { "coreCoherence": 96, "globalSync": 94 } as Record<string, string | number>,
+          },
+          {
+            id: "consciousness_manager",
+            name: "Consciousness Manager",
+            status: "active" as const,
+            integrationLevel: 93,
+            load: 72,
+            metrics: { "managementEfficiency": 93, "resourceOptimization": 88 } as Record<string, string | number>,
+          },
+          {
+            id: "safety_monitor",
+            name: "Safety Monitor",
+            status: "active" as const,
+            integrationLevel: 99,
+            load: 45,
+            metrics: { "ethicalCompliance": 99, "safetyViolations": 0 } as Record<string, string | number>,
           }
         ];
 
