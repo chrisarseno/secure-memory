@@ -617,6 +617,11 @@ export class LocalNEXUSSystem {
     );
   }
 
+  // Public method to access AI service for collaborative queries
+  getAIService() {
+    return this.localAI;
+  }
+
   async executeGoal(goal: string, context: any = {}, computeBudget: number = 60000): Promise<{
     tasks: LocalTask[];
     results: LocalExecutionResult[];
