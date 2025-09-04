@@ -305,7 +305,7 @@ setInterval(async () => {
     const aiSystemMetrics = await localNexusSystem.getLocalMetrics();
     const curriculumMetrics = await localNexusSystem.getCurriculumMetrics();
     const safetyMetrics = await localNexusSystem.getReputationMetrics();
-    const collaborationMetrics = collaborationSystem ? collaborationSystem.getSystemMetrics() : null;
+    const collaborationMetrics = collaborationSystem ? await collaborationSystem.getSystemMetrics() : null;
     
     // Calculate real consciousness coherence from module integration levels
     const modules = await storage.getModules();
