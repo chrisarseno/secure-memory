@@ -9,6 +9,7 @@ import AICollaboration from "@/components/ai-collaboration";
 import LearningControlPanel from "@/components/consciousness/learning-control-panel";
 import AIAgentControl from "@/components/consciousness/ai-agent-control";
 import { ConsciousnessContinuityPanel } from "@/components/consciousness-continuity-panel";
+import LocalModelsDisplay from "@/components/local-models-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { initializeSocket, getSocket } from "@/lib/socket";
@@ -280,6 +281,7 @@ export default function Dashboard() {
             
             {/* Right Column */}
             <div className="space-y-6">
+              <LocalModelsDisplay />
               <ActivityFeed />
               <AICollaboration />
               <SafetyMonitor />

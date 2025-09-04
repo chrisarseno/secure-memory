@@ -119,6 +119,31 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
     }
   });
 
+  // Local AI Models
+  router.get("/api/local-models", async (req: Request, res: Response) => {
+    try {
+      if (localNexusSystem && localNexusSystem.getAIService) {
+        const aiService = localNexusSystem.getAIService();
+        const models = aiService.getAvailableModels();
+        const modelList = Array.from(models.entries()).map(([id, model]) => ({
+          id,
+          name: model.name,
+          type: model.type,
+          status: model.status,
+          capabilities: model.capabilities,
+          memoryMB: model.memoryMB,
+          specialized: model.specialized
+        }));
+        res.json(modelList);
+      } else {
+        res.json([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch local models:', error);
+      res.status(500).json({ error: "Failed to fetch local models" });
+    }
+  });
+
   // AI Collaboration
   router.get("/api/collaboration/messages", async (req: Request, res: Response) => {
     try {

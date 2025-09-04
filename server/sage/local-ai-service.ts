@@ -65,37 +65,109 @@ export class LocalAIService {
         id: 'llama3.2',
         name: 'Llama 3.2 7B',
         type: 'ollama',
-        capabilities: ['reasoning', 'analysis', 'planning'],
+        capabilities: ['reasoning', 'analysis', 'planning', 'mathematics'],
         memoryMB: 4096,
-        status: 'available',
+        status: 'ready',
         specialized: 'reasoning'
       },
       {
         id: 'mistral',
         name: 'Mistral 7B',
         type: 'ollama', 
-        capabilities: ['creative', 'writing', 'synthesis'],
+        capabilities: ['creative', 'writing', 'synthesis', 'storytelling'],
         memoryMB: 4096,
-        status: 'available',
+        status: 'ready',
         specialized: 'creative'
       },
       {
         id: 'codellama',
         name: 'Code Llama 7B',
         type: 'ollama',
-        capabilities: ['coding', 'analysis', 'verification'],
+        capabilities: ['coding', 'analysis', 'verification', 'debugging'],
         memoryMB: 4096,
-        status: 'available',
+        status: 'ready',
         specialized: 'analysis'
       },
       {
         id: 'phi3',
         name: 'Phi-3 Mini',
         type: 'ollama',
-        capabilities: ['verification', 'fact-checking', 'reasoning'],
+        capabilities: ['verification', 'fact-checking', 'reasoning', 'logic'],
         memoryMB: 2048,
-        status: 'available',
+        status: 'ready',
         specialized: 'verification'
+      },
+      {
+        id: 'gemma2',
+        name: 'Gemma 2 9B',
+        type: 'ollama',
+        capabilities: ['conversation', 'reasoning', 'knowledge', 'helpfulness'],
+        memoryMB: 5120,
+        status: 'ready',
+        specialized: 'reasoning'
+      },
+      {
+        id: 'qwen2',
+        name: 'Qwen2 7B',
+        type: 'transformers',
+        capabilities: ['multilingual', 'reasoning', 'analysis', 'translation'],
+        memoryMB: 4096,
+        status: 'ready',
+        specialized: 'reasoning'
+      },
+      {
+        id: 'llama3.1',
+        name: 'Llama 3.1 8B',
+        type: 'ollama',
+        capabilities: ['instruction-following', 'reasoning', 'conversation'],
+        memoryMB: 4608,
+        status: 'ready',
+        specialized: 'reasoning'
+      },
+      {
+        id: 'deepseek-coder',
+        name: 'DeepSeek Coder 6.7B',
+        type: 'transformers',
+        capabilities: ['coding', 'software-engineering', 'documentation'],
+        memoryMB: 3584,
+        status: 'ready',
+        specialized: 'analysis'
+      },
+      {
+        id: 'orca-mini',
+        name: 'Orca Mini 3B',
+        type: 'llamacpp',
+        capabilities: ['reasoning', 'conversation', 'efficiency'],
+        memoryMB: 2048,
+        status: 'ready',
+        specialized: 'reasoning'
+      },
+      {
+        id: 'nous-hermes',
+        name: 'Nous Hermes 7B',
+        type: 'ollama',
+        capabilities: ['creative', 'reasoning', 'roleplay', 'storytelling'],
+        memoryMB: 4096,
+        status: 'ready',
+        specialized: 'creative'
+      },
+      {
+        id: 'wizard-math',
+        name: 'WizardMath 7B',
+        type: 'transformers',
+        capabilities: ['mathematics', 'problem-solving', 'reasoning'],
+        memoryMB: 4096,
+        status: 'ready',
+        specialized: 'verification'
+      },
+      {
+        id: 'stable-beluga',
+        name: 'Stable Beluga 7B',
+        type: 'llamacpp',
+        capabilities: ['instruction-following', 'creative', 'reasoning'],
+        memoryMB: 4096,
+        status: 'ready',
+        specialized: 'creative'
       }
     ];
 
