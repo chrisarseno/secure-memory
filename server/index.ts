@@ -298,55 +298,90 @@ io.on("connection", (socket) => {
   });
 });
 
-// Simulate real-time consciousness updates
+// Real-time consciousness metrics from actual AI systems
 setInterval(async () => {
   try {
-    // Update metrics with slight variations
-    const currentMetrics = await storage.getLatestMetrics();
-    if (currentMetrics) {
-      const newMetrics = {
-        consciousnessCoherence: Math.max(0, Math.min(100, currentMetrics.consciousnessCoherence + (Math.random() - 0.5) * 2)),
-        creativeIntelligence: Math.max(0, Math.min(100, currentMetrics.creativeIntelligence + (Math.random() - 0.5) * 3)),
-        safetyCompliance: Math.max(0, Math.min(100, currentMetrics.safetyCompliance + (Math.random() - 0.5) * 0.5)),
-        learningEfficiency: Math.max(0, Math.min(100, currentMetrics.learningEfficiency + (Math.random() - 0.5) * 4)),
-        costPerHour: currentMetrics.costPerHour + (Math.random() - 0.5) * 10,
-        modulesOnline: 42,
-        totalModules: 42,
-      };
+    // Get real system metrics from AI components
+    const aiSystemMetrics = await localNexusSystem.getLocalMetrics();
+    const curriculumMetrics = await localNexusSystem.getCurriculumMetrics();
+    const safetyMetrics = await localNexusSystem.getReputationMetrics();
+    const collaborationMetrics = collaborationSystem ? collaborationSystem.getSystemMetrics() : null;
+    
+    // Calculate real consciousness coherence from module integration levels
+    const modules = await storage.getModules();
+    const avgIntegration = modules.reduce((sum, mod) => sum + mod.integrationLevel, 0) / modules.length;
+    const moduleHealthScore = modules.filter(mod => mod.status === 'active').length / modules.length * 100;
+    
+    // Real consciousness coherence based on module integration and health
+    const consciousnessCoherence = (avgIntegration + moduleHealthScore) / 2;
+    
+    // Real creative intelligence from AI model performance and request success
+    const creativeIntelligence = Math.min(100, 
+      (aiSystemMetrics.readyModels / Math.max(1, aiSystemMetrics.totalModels)) * 60 +
+      Math.min(40, aiSystemMetrics.totalRequests * 0.1));
+    
+    // Real safety compliance from source reputation and reliability
+    const safetyCompliance = Math.min(100, 
+      (safetyMetrics.reliableSourcesCount / Math.max(1, safetyMetrics.totalSourcesEvaluated)) * 100);
+    
+    // Real learning efficiency from curriculum engine metrics
+    const learningEfficiency = Math.min(100,
+      curriculumMetrics ? curriculumMetrics.learningEfficiency * 100 : 75);
+    
+    // Real cost per hour from actual compute usage
+    const realCostPerHour = aiSystemMetrics.totalComputeTime > 0 
+      ? localNexusSystem.getHourlyCostRate()
+      : 0.05; // Base rate when idle
+    
+    // Count actually online modules
+    const modulesOnline = modules.filter(mod => mod.status === 'active').length;
+    
+    const newMetrics = {
+      consciousnessCoherence: Math.round(consciousnessCoherence * 10) / 10,
+      creativeIntelligence: Math.round(creativeIntelligence * 10) / 10,
+      safetyCompliance: Math.round(safetyCompliance * 10) / 10,
+      learningEfficiency: Math.round(learningEfficiency * 10) / 10,
+      costPerHour: Math.round(realCostPerHour * 100) / 100,
+      modulesOnline,
+      totalModules: modules.length,
+    };
 
-      await storage.addMetrics(newMetrics);
-      
-      // Broadcast to all connected clients
-      io.emit("metrics-update", newMetrics);
+    await storage.addMetrics(newMetrics);
+    
+    // Broadcast to all connected clients
+    io.emit("metrics-update", newMetrics);
+
+    // Add activities based on actual AI system performance
+    if (aiSystemMetrics.totalRequests > 0) {
+      const avgResponseTime = aiSystemMetrics.totalComputeTime / aiSystemMetrics.totalRequests;
+      if (avgResponseTime < 2) {
+        const activity = await storage.addActivity({
+          type: "knowledge" as const,
+          message: `AI system processed ${aiSystemMetrics.totalRequests} requests with ${avgResponseTime.toFixed(1)}s avg response`,
+          moduleId: "local_ai_service"
+        });
+        io.emit("activity-update", activity);
+      }
     }
 
-    // Randomly add activities
-    if (Math.random() < 0.3) {
-      const activities = [
-        { type: "virtue" as const, message: "New virtue integrated: Patience", moduleId: "virtue_learning" },
-        { type: "creative" as const, message: "Creative solution generated for climate modeling", moduleId: "creative_intelligence" },
-        { type: "social" as const, message: "Social agent model updated: Research_Team_Alpha", moduleId: "social_cognition" },
-        { type: "temporal" as const, message: "Temporal projection validated: 87% accuracy", moduleId: "temporal_consciousness" },
-        { type: "knowledge" as const, message: "Knowledge graph updated: 1,247 new connections", moduleId: "global_workspace" },
-      ];
-
-      const randomActivity = activities[Math.floor(Math.random() * activities.length)];
-      const activity = await storage.addActivity(randomActivity);
-      
-      io.emit("activity-update", activity);
-    }
-
-    // Update module statuses occasionally
-    if (Math.random() < 0.1) {
-      const modules = await storage.getModules();
-      const randomModule = modules[Math.floor(Math.random() * modules.length)];
-      
-      const updated = await storage.updateModule(randomModule.id, {
-        load: Math.max(0, Math.min(100, randomModule.load + (Math.random() - 0.5) * 10)),
-        integrationLevel: Math.max(0, Math.min(100, randomModule.integrationLevel + (Math.random() - 0.5) * 2)),
+    // Add collaboration system metrics if available
+    if (collaborationMetrics && collaborationMetrics.tasksCompleted > 0) {
+      const collabActivity = await storage.addActivity({
+        type: "social" as const,
+        message: `AI agents completed ${collaborationMetrics.tasksCompleted} collaborative tasks`,
+        moduleId: "ai_collaboration"
       });
-      
-      io.emit("module-update", updated);
+      io.emit("activity-update", collabActivity);
+    }
+
+    // Add curriculum learning progress
+    if (curriculumMetrics && curriculumMetrics.gapsResolved > 0) {
+      const learningActivity = await storage.addActivity({
+        type: "creative" as const,
+        message: `Learning system resolved ${curriculumMetrics.gapsResolved} knowledge gaps (${(curriculumMetrics.learningEfficiency * 100).toFixed(1)}% efficiency)`,
+        moduleId: "curriculum_engine"
+      });
+      io.emit("activity-update", learningActivity);
     }
 
   } catch (error) {

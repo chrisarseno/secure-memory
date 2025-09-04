@@ -891,6 +891,16 @@ export class LocalNEXUSSystem {
     return this.sourceReputation.getReputationMetrics();
   }
 
+  async getCurriculumMetrics() {
+    const learningStats = await this.getLearningStats();
+    return {
+      totalGapsIdentified: learningStats.experiencesRecorded || 0,
+      gapsResolved: learningStats.improvementCount || 0,
+      learningEfficiency: learningStats.averagePerformance || 0.75,
+      knowledgeGrowthRate: learningStats.experiencesRecorded > 0 ? learningStats.improvementCount / learningStats.experiencesRecorded : 0.5,
+    };
+  }
+
   // Self-learning methods
   async startAutonomousLearning() {
     return await this.selfLearningAgent.startLearningCycle();
