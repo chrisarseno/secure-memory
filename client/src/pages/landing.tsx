@@ -84,12 +84,12 @@ export default function LandingPage() {
             <form onSubmit={handleUsernameSubmit} className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="username" className="text-sm font-medium text-slate-300">
-                  Username
+                  Email Address
                 </label>
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Enter username"
+                  placeholder="Enter email to access NEXUS"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="bg-slate-700/50 border-slate-600 text-white placeholder-slate-400 focus:border-blue-500 focus:ring-blue-500"
