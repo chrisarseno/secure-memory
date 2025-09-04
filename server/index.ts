@@ -2,6 +2,7 @@ import express from "express";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import cors from "cors";
+import path from "path";
 import { DatabaseStorage } from "./database-storage";
 import { createRoutes } from "./routes";
 import { setupVite } from "./vite";
@@ -28,13 +29,21 @@ app.use(express.json());
 // Setup authentication
 setupAuth(app);
 
-// Development middleware (Vite) - must come before API routes
-if (process.env.NODE_ENV !== "production") {
+// API Routes MUST come before static serving to avoid conflicts
+app.use(createRoutes(storage, localNexusSystem));
+
+// Serve frontend - Vite in development, static files in production
+if (process.env.NODE_ENV === "production") {
+  // Serve built static files in production
+  const distPath = path.resolve(import.meta.dirname, "..", "dist", "public");
+  app.use(express.static(distPath));
+  // Serve index.html for all non-API routes (SPA routing)
+  app.get("*", (req, res) => {
+    res.sendFile(path.resolve(distPath, "index.html"));
+  });
+} else {
   setupVite(app, server);
 }
-
-// API Routes
-app.use(createRoutes(storage, localNexusSystem));
 
 // WebSocket for real-time updates
 io.on("connection", (socket) => {
