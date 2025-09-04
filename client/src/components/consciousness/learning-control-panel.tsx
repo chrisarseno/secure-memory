@@ -31,6 +31,36 @@ interface LearningStats {
   trendDirection: 'improving' | 'stable' | 'declining';
 }
 
+interface LearningActivity {
+  id: string;
+  phase: 'gap_identification' | 'task_generation' | 'research' | 'practice' | 'verification' | 'training' | 'consolidation';
+  description: string;
+  progress: number;
+  domain?: string;
+  estimatedTime?: number;
+  startedAt: string;
+  details?: any;
+}
+
+interface LearningGap {
+  id: string;
+  domain: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high';
+  estimatedHours: number;
+  difficulty: number;
+  status: 'identified' | 'active' | 'resolved';
+}
+
+interface TrainingBatch {
+  id: string;
+  domain: string;
+  batchSize: number;
+  progress: number;
+  learningRate: number;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+}
+
 interface LearningControlPanelProps {
   className?: string;
 }
@@ -38,6 +68,10 @@ interface LearningControlPanelProps {
 export default function LearningControlPanel({ className = "" }: LearningControlPanelProps) {
   const [isLearningActive, setIsLearningActive] = useState(false);
   const [realTimeStats, setRealTimeStats] = useState<LearningStats | null>(null);
+  const [currentActivities, setCurrentActivities] = useState<LearningActivity[]>([]);
+  const [activeLearningGaps, setActiveLearningGaps] = useState<LearningGap[]>([]);
+  const [trainingBatches, setTrainingBatches] = useState<TrainingBatch[]>([]);
+  const [currentPhase, setCurrentPhase] = useState<string>('idle');
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -56,9 +90,36 @@ export default function LearningControlPanel({ className = "" }: LearningControl
       }
     });
 
+    // Enhanced real-time learning activity updates
+    socket.on('learning-activity', (activity: LearningActivity) => {
+      setCurrentActivities(prev => {
+        const updated = prev.filter(a => a.id !== activity.id);
+        if (activity.progress < 100) {
+          updated.push(activity);
+        }
+        return updated.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+      });
+    });
+
+    socket.on('learning-phase-change', (data: { phase: string, description: string }) => {
+      setCurrentPhase(data.phase);
+    });
+
+    socket.on('learning-gaps-update', (gaps: LearningGap[]) => {
+      setActiveLearningGaps(gaps);
+    });
+
+    socket.on('training-batches-update', (batches: TrainingBatch[]) => {
+      setTrainingBatches(batches);
+    });
+
     return () => {
       socket.off('learning-progress');
       socket.off('training-status');
+      socket.off('learning-activity');
+      socket.off('learning-phase-change');
+      socket.off('learning-gaps-update');
+      socket.off('training-batches-update');
     };
   }, []);
 
@@ -263,17 +324,28 @@ export default function LearningControlPanel({ className = "" }: LearningControl
           </Button>
         </div>
 
-        {/* Recent Learning Activity */}
-        <div className="space-y-2">
+        {/* Real-Time Learning Activity */}
+        <div className="space-y-3">
           <h4 className="text-sm font-medium flex items-center gap-2">
             <Clock className="h-4 w-4" />
-            Learning Activity
+            Current Learning Activity
           </h4>
-          <div className="text-sm text-muted-foreground p-3 bg-muted/10 rounded border-l-2 border-primary/50">
+          
+          {/* Current Phase */}
+          <div className="text-sm p-3 bg-muted/10 rounded border-l-2 border-primary/50">
             {isLearningActive ? (
-              <div className="flex items-center gap-2">
-                <div className="animate-pulse h-2 w-2 bg-green-500 rounded-full"></div>
-                <span>Autonomous learning cycle in progress...</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="animate-pulse h-2 w-2 bg-green-500 rounded-full"></div>
+                  <span className="font-medium text-green-700 dark:text-green-400">
+                    {currentPhase === 'idle' ? 'Learning Cycle Active' : currentPhase.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+                {currentActivities.length > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    Currently: {currentActivities[0]?.description}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex items-center gap-2">
@@ -282,18 +354,105 @@ export default function LearningControlPanel({ className = "" }: LearningControl
               </div>
             )}
           </div>
+
+          {/* Active Learning Activities */}
+          {currentActivities.length > 0 && (
+            <div className="space-y-2">
+              <h5 className="text-xs font-medium text-muted-foreground">Active Tasks</h5>
+              <ScrollArea className="h-32">
+                <div className="space-y-2">
+                  {currentActivities.map((activity) => (
+                    <div key={activity.id} className="text-xs border rounded p-2 bg-card">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium">{activity.phase.replace('_', ' ')}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {activity.domain}
+                        </Badge>
+                      </div>
+                      <p className="text-muted-foreground mb-2">{activity.description}</p>
+                      <Progress value={activity.progress} className="h-1" />
+                      <div className="flex justify-between mt-1">
+                        <span>{activity.progress}%</span>
+                        {activity.estimatedTime && (
+                          <span>{activity.estimatedTime}min remaining</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+
+          {/* Active Learning Gaps */}
+          {activeLearningGaps.length > 0 && (
+            <div className="space-y-2">
+              <h5 className="text-xs font-medium text-muted-foreground">Learning Gaps Being Addressed</h5>
+              <div className="space-y-1">
+                {activeLearningGaps.slice(0, 3).map((gap) => (
+                  <div key={gap.id} className="text-xs flex items-center justify-between">
+                    <span>{gap.domain}: {gap.description}</span>
+                    <Badge 
+                      variant={gap.priority === 'high' ? 'destructive' : gap.priority === 'medium' ? 'default' : 'secondary'}
+                      className="text-xs"
+                    >
+                      {gap.priority}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Training Batches */}
+          {trainingBatches.length > 0 && (
+            <div className="space-y-2">
+              <h5 className="text-xs font-medium text-muted-foreground">Training Batches</h5>
+              <div className="space-y-1">
+                {trainingBatches.map((batch) => (
+                  <div key={batch.id} className="text-xs flex items-center justify-between">
+                    <span>{batch.domain} ({batch.batchSize} examples)</span>
+                    <div className="flex items-center gap-1">
+                      <div className={`w-1.5 h-1.5 rounded-full ${
+                        batch.status === 'completed' ? 'bg-green-500' :
+                        batch.status === 'processing' ? 'bg-yellow-500 animate-pulse' :
+                        batch.status === 'failed' ? 'bg-red-500' : 'bg-gray-400'
+                      }`} />
+                      <span>{batch.progress}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Learning Goals */}
+        {/* Dynamic Learning Goals */}
         <div className="space-y-2">
-          <h4 className="text-sm font-medium">Current Learning Objectives</h4>
+          <h4 className="text-sm font-medium">Active Learning Objectives</h4>
           <ScrollArea className="h-24">
             <div className="space-y-1 text-xs text-muted-foreground">
-              <div>• Improve reasoning accuracy above 80%</div>
-              <div>• Enhance creative output quality</div>
-              <div>• Optimize response consistency</div>
-              <div>• Develop better factual recall</div>
-              <div>• Strengthen multi-modal understanding</div>
+              {activeLearningGaps.length > 0 ? (
+                activeLearningGaps.map((gap) => (
+                  <div key={gap.id} className="flex items-center justify-between">
+                    <span>• {gap.description}</span>
+                    <Badge 
+                      variant={gap.status === 'resolved' ? 'default' : 'secondary'} 
+                      className="text-xs"
+                    >
+                      {gap.status}
+                    </Badge>
+                  </div>
+                ))
+              ) : (
+                <div className="space-y-1">
+                  <div>• Improve reasoning accuracy above 80%</div>
+                  <div>• Enhance creative output quality</div>
+                  <div>• Optimize response consistency</div>
+                  <div>• Develop better factual recall</div>
+                  <div>• Strengthen multi-modal understanding</div>
+                </div>
+              )}
             </div>
           </ScrollArea>
         </div>
