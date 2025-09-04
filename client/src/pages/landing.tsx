@@ -19,6 +19,8 @@ export default function LandingPage() {
     setError('');
     setIsVerifying(true);
 
+    console.log('🔐 Attempting authentication with:', username.trim());
+
     try {
       const response = await fetch('/api/auth/verify-username', {
         method: 'POST',
@@ -29,12 +31,17 @@ export default function LandingPage() {
         credentials: 'include'
       });
 
+      console.log('📡 Authentication response status:', response.status);
+      const data = await response.json();
+      console.log('📊 Authentication response data:', data);
+
       if (response.ok) {
-        const data = await response.json();
+        console.log('✅ Authentication successful, refreshing state...');
         // Email verified, invalidate auth queries to refresh state
         queryClient.invalidateQueries({ queryKey: ['auth'] });
         // Small delay to allow queries to refresh
         setTimeout(() => {
+          console.log('🚀 Navigating to:', data.redirect || '/');
           if (data.redirect) {
             navigate(data.redirect);
           } else {
@@ -42,12 +49,12 @@ export default function LandingPage() {
           }
         }, 100);
       } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        setError(`Access denied. ${errorData.error || 'Invalid email address.'}`);
+        console.log('❌ Authentication failed:', data);
+        setError(`Access denied. ${data.error || 'Invalid email address.'}`);
         setIsVerifying(false);
       }
     } catch (error) {
-      console.error('Authentication error:', error);
+      console.error('🚨 Authentication error:', error);
       setError('Connection error. Please try again.');
       setIsVerifying(false);
     }
