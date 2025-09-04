@@ -264,6 +264,8 @@ export default function Dashboard() {
         
         {/* Dashboard Content */}
         <div className="flex-1 overflow-auto p-6">
+          {/* Tab-based content rendering */}
+          {activeTab === "dashboard" && (
           {/* Critical Metrics Row */}
           <ConsciousnessMetrics metrics={currentMetrics} />
           
@@ -295,6 +297,48 @@ export default function Dashboard() {
           
           {/* Knowledge Graph Preview */}
           <KnowledgeGraphVisualization />
+          )}
+          
+          {/* Other tabs show simple messages for now */}
+          {activeTab !== "dashboard" && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i className={`fas ${
+                    activeTab === 'nexus-core' ? 'fa-brain' :
+                    activeTab === 'knowledge' ? 'fa-project-diagram' :
+                    activeTab === 'social' ? 'fa-users' :
+                    activeTab === 'temporal' ? 'fa-clock' :
+                    activeTab === 'creative' ? 'fa-lightbulb' :
+                    activeTab === 'values' ? 'fa-balance-scale' :
+                    activeTab === 'safety' ? 'fa-shield-alt' : 'fa-cog'
+                  } text-primary-foreground text-2xl`}></i>
+                </div>
+                <h2 className="text-2xl font-bold mb-2">{
+                  activeTab === 'nexus-core' ? 'NEXUS Core System' :
+                  activeTab === 'knowledge' ? 'Knowledge Graph' :
+                  activeTab === 'social' ? 'Social Cognition' :
+                  activeTab === 'temporal' ? 'Temporal Awareness' :
+                  activeTab === 'creative' ? 'Creative Intelligence' :
+                  activeTab === 'values' ? 'Value System' :
+                  activeTab === 'safety' ? 'Safety Monitor' : 'System Module'
+                }</h2>
+                <p className="text-muted-foreground mb-4">{
+                  activeTab === 'nexus-core' ? 'Central consciousness coordination and module management' :
+                  activeTab === 'knowledge' ? 'Semantic knowledge representation and reasoning' :
+                  activeTab === 'social' ? 'Advanced social understanding and collaboration systems' :
+                  activeTab === 'temporal' ? 'Time-aware consciousness and memory persistence' :
+                  activeTab === 'creative' ? 'Creative problem solving and innovative thinking' :
+                  activeTab === 'values' ? 'Ethical reasoning and value alignment systems' :
+                  activeTab === 'safety' ? 'Real-time safety monitoring and threat detection' : 'System module interface'
+                }</p>
+                <div className="bg-card border rounded-lg p-6 max-w-md mx-auto">
+                  <p className="text-sm text-muted-foreground">This module interface is currently under development. Advanced functionality will be available in future updates.</p>
+                  <div className="mt-4 text-xs text-muted-foreground">Module: <span className="font-mono">{activeTab}</span></div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
