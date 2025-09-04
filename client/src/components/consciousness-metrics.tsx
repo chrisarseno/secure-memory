@@ -7,16 +7,37 @@ interface MetricsProps {
     creativeIntelligence: number;
     safetyCompliance: number;
     learningEfficiency: number;
+    previousMetrics?: {
+      consciousnessCoherence: number;
+      creativeIntelligence: number;
+      safetyCompliance: number;
+      learningEfficiency: number;
+    };
   };
 }
 
 export default function ConsciousnessMetrics({ metrics }: MetricsProps) {
+  // Calculate real percentage changes from previous metrics
+  const calculateChange = (current: number, previous: number | undefined): string => {
+    if (!previous || previous === 0) return "New";
+    const change = ((current - previous) / previous) * 100;
+    const sign = change >= 0 ? "+" : "";
+    return `${sign}${change.toFixed(1)}%`;
+  };
+
+  const getChangeColor = (current: number, previous: number | undefined): string => {
+    if (!previous) return "muted-foreground";
+    const change = current - previous;
+    return change >= 0 ? "green-500" : "red-500";
+  };
+
   const metricCards = [
     {
       icon: Brain,
       value: metrics?.consciousnessCoherence || 0,
       label: "Consciousness Coherence",
-      change: "+2.1%",
+      change: calculateChange(metrics?.consciousnessCoherence || 0, metrics?.previousMetrics?.consciousnessCoherence),
+      changeColor: getChangeColor(metrics?.consciousnessCoherence || 0, metrics?.previousMetrics?.consciousnessCoherence),
       color: "accent",
       testId: "metric-consciousness"
     },
@@ -24,7 +45,8 @@ export default function ConsciousnessMetrics({ metrics }: MetricsProps) {
       icon: Lightbulb,
       value: metrics?.creativeIntelligence || 0,
       label: "Creative Intelligence",
-      change: "+5.3%",
+      change: calculateChange(metrics?.creativeIntelligence || 0, metrics?.previousMetrics?.creativeIntelligence),
+      changeColor: getChangeColor(metrics?.creativeIntelligence || 0, metrics?.previousMetrics?.creativeIntelligence),
       color: "chart-2",
       testId: "metric-creative"
     },
@@ -32,7 +54,8 @@ export default function ConsciousnessMetrics({ metrics }: MetricsProps) {
       icon: Shield,
       value: metrics?.safetyCompliance || 0,
       label: "Safety Compliance",
-      change: "-0.2%",
+      change: calculateChange(metrics?.safetyCompliance || 0, metrics?.previousMetrics?.safetyCompliance),
+      changeColor: getChangeColor(metrics?.safetyCompliance || 0, metrics?.previousMetrics?.safetyCompliance),
       color: "chart-3",
       testId: "metric-safety"
     },
@@ -40,7 +63,8 @@ export default function ConsciousnessMetrics({ metrics }: MetricsProps) {
       icon: GraduationCap,
       value: metrics?.learningEfficiency || 0,
       label: "Learning Efficiency",
-      change: "+12.4%",
+      change: calculateChange(metrics?.learningEfficiency || 0, metrics?.previousMetrics?.learningEfficiency),
+      changeColor: getChangeColor(metrics?.learningEfficiency || 0, metrics?.previousMetrics?.learningEfficiency),
       color: "chart-4",
       testId: "metric-learning"
     }
@@ -62,8 +86,8 @@ export default function ConsciousnessMetrics({ metrics }: MetricsProps) {
                 {metric.value.toFixed(1)}%
               </p>
               <p className="text-sm text-muted-foreground">{metric.label}</p>
-              <p className={`text-xs text-${metric.color}`} data-testid={`${metric.testId}-change`}>
-                {metric.change} from yesterday
+              <p className={`text-xs text-${metric.changeColor}`} data-testid={`${metric.testId}-change`}>
+                {metric.change} from last hour
               </p>
             </div>
           </CardContent>

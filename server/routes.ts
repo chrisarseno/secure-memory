@@ -43,8 +43,23 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
   // System Metrics
   router.get("/api/metrics", async (req: Request, res: Response) => {
     try {
-      const metrics = await storage.getLatestMetrics();
-      res.json(metrics);
+      const currentMetrics = await storage.getLatestMetrics();
+      
+      // Get previous metrics from 1 hour ago for real percentage changes
+      const metricsHistory = await storage.getMetricsHistory(1); // 1 hour
+      const previousMetrics = metricsHistory.length > 1 ? metricsHistory[metricsHistory.length - 2] : null;
+      
+      const response = {
+        ...currentMetrics,
+        previousMetrics: previousMetrics ? {
+          consciousnessCoherence: previousMetrics.consciousnessCoherence,
+          creativeIntelligence: previousMetrics.creativeIntelligence,
+          safetyCompliance: previousMetrics.safetyCompliance,
+          learningEfficiency: previousMetrics.learningEfficiency,
+        } : null
+      };
+      
+      res.json(response);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch metrics" });
     }
