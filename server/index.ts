@@ -10,6 +10,7 @@ import { LocalNEXUSSystem } from "./sage/local-sage-system";
 import { ConsciousnessBridge } from "./consciousness-bridge";
 import { AICollaborationSystem } from "./ai-collaboration-system";
 import { setupAuth } from "./auth";
+import { DistributedConsciousnessSystem } from "./distributed";
 
 const app = express();
 const server = createServer(app);
@@ -25,6 +26,31 @@ const localNexusSystem = new LocalNEXUSSystem(storage);
 const consciousnessBridge = new ConsciousnessBridge(storage);
 const collaborationSystem = new AICollaborationSystem(localNexusSystem.getAIService(), consciousnessBridge);
 
+// Initialize Distributed Consciousness System
+const distributedSystem = new DistributedConsciousnessSystem(
+  {
+    nodeId: `nexus-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    address: '0.0.0.0',
+    port: 5001, // Different port for node communication
+    capabilities: ['consciousness-processing', 'ai-collaboration', 'multi-modal-processing'],
+    consciousnessModules: [
+      'global_workspace',
+      'social_cognition', 
+      'temporal_consciousness',
+      'value_learning',
+      'virtue_learning',
+      'creative_intelligence',
+      'consciousness_core',
+      'consciousness_manager',
+      'safety_monitor'
+    ],
+    computeCapacity: 100,
+    region: 'local'
+  },
+  consciousnessBridge,
+  storage
+);
+
 app.use(cors());
 app.use(express.json());
 
@@ -32,7 +58,7 @@ app.use(express.json());
 setupAuth(app);
 
 // API Routes MUST come before static serving to avoid conflicts
-app.use(createRoutes(storage, localNexusSystem, collaborationSystem));
+app.use(createRoutes(storage, localNexusSystem, collaborationSystem, distributedSystem));
 
 // Serve frontend - Vite in development, static files in production
 if (process.env.NODE_ENV === "production") {

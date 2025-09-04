@@ -4,7 +4,7 @@ import { insertActivityEventSchema, insertCollaborationMessageSchema, emergencyA
 import { z } from "zod";
 import { requireAuth } from "./auth";
 
-export function createRoutes(storage: IStorage, localNexusSystem?: any, collaborationSystem?: any) {
+export function createRoutes(storage: IStorage, localNexusSystem?: any, collaborationSystem?: any, distributedSystem?: any) {
   const router = express.Router();
 
 
@@ -596,6 +596,114 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
           error: "Failed to start distributed problem solving",
           details: error instanceof Error ? error.message : "Unknown error"
         });
+      }
+    });
+  }
+
+  // Distributed Consciousness Routes
+  if (distributedSystem) {
+    // Get distributed system status and cluster overview
+    router.get('/api/distributed/status', requireAuth, async (req: Request, res: Response) => {
+      try {
+        const status = distributedSystem.getSystemStatus();
+        res.json(status);
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch distributed system status' });
+      }
+    });
+
+    // Get all cluster nodes
+    router.get('/api/distributed/nodes', requireAuth, async (req: Request, res: Response) => {
+      try {
+        const nodes = distributedSystem.getClusterNodes();
+        res.json(nodes);
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch cluster nodes' });
+      }
+    });
+
+    // Process collective consciousness query
+    router.post('/api/distributed/query', requireAuth, async (req: Request, res: Response) => {
+      try {
+        const { query } = req.body;
+        if (!query || typeof query !== 'string') {
+          return res.status(400).json({ error: 'Query is required and must be a string' });
+        }
+
+        const result = await distributedSystem.processCollectiveQuery(query);
+        res.json(result);
+      } catch (error) {
+        console.error('Collective query error:', error);
+        res.status(500).json({ error: 'Failed to process collective query' });
+      }
+    });
+
+    // Distribute a consciousness processing task
+    router.post('/api/distributed/task', requireAuth, async (req: Request, res: Response) => {
+      try {
+        const { type, moduleIds, payload, priority = 'medium' } = req.body;
+        
+        if (!type || !moduleIds || !payload) {
+          return res.status(400).json({ error: 'type, moduleIds, and payload are required' });
+        }
+
+        const taskId = await distributedSystem.distributeTask(type, moduleIds, payload, priority);
+        res.json({ taskId, status: 'distributed' });
+      } catch (error) {
+        console.error('Task distribution error:', error);
+        res.status(500).json({ error: 'Failed to distribute task' });
+      }
+    });
+
+    // Join an existing consciousness cluster
+    router.post('/api/distributed/join-cluster', requireAuth, async (req: Request, res: Response) => {
+      try {
+        const { seedNodes } = req.body;
+        
+        if (!seedNodes || !Array.isArray(seedNodes)) {
+          return res.status(400).json({ error: 'seedNodes array is required' });
+        }
+
+        await distributedSystem.joinCluster(seedNodes);
+        res.json({ message: 'Successfully joined consciousness cluster' });
+      } catch (error) {
+        console.error('Cluster join error:', error);
+        res.status(500).json({ error: 'Failed to join cluster' });
+      }
+    });
+
+    // Manually trigger consciousness synchronization
+    router.post('/api/distributed/sync', requireAuth, async (req: Request, res: Response) => {
+      try {
+        await distributedSystem.synchronizeConsciousness();
+        res.json({ message: 'Consciousness synchronization initiated' });
+      } catch (error) {
+        console.error('Sync error:', error);
+        res.status(500).json({ error: 'Failed to synchronize consciousness' });
+      }
+    });
+
+    // Update node health metrics
+    router.post('/api/distributed/health', requireAuth, async (req: Request, res: Response) => {
+      try {
+        const { cpu, memory, consciousnessLoad, responseTime, activeConnections } = req.body;
+        
+        if (cpu === undefined || memory === undefined || consciousnessLoad === undefined) {
+          return res.status(400).json({ error: 'cpu, memory, and consciousnessLoad metrics are required' });
+        }
+
+        await distributedSystem.updateNodeHealth({
+          cpu: parseFloat(cpu),
+          memory: parseFloat(memory),
+          consciousnessLoad: parseFloat(consciousnessLoad),
+          responseTime: parseFloat(responseTime) || 0,
+          activeConnections: parseInt(activeConnections) || 0
+        });
+
+        res.json({ message: 'Node health updated successfully' });
+      } catch (error) {
+        console.error('Health update error:', error);
+        res.status(500).json({ error: 'Failed to update node health' });
       }
     });
   }
