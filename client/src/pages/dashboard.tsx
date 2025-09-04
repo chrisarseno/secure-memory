@@ -17,6 +17,7 @@ import { Bell, DollarSign } from "lucide-react";
 export default function Dashboard() {
   const [realTimeMetrics, setRealTimeMetrics] = useState<any>(null);
   const [connectionStatus, setConnectionStatus] = useState<string>("disconnected");
+  const [activeTab, setActiveTab] = useState<string>("dashboard");
 
   // Initialize WebSocket connection
   useEffect(() => {
@@ -99,38 +100,102 @@ export default function Dashboard() {
         {/* Navigation */}
         <nav className="flex-1 p-4">
           <div className="space-y-1">
-            <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium" data-testid="nav-dashboard">
+            <button 
+              onClick={() => setActiveTab("dashboard")} 
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium ${
+                activeTab === "dashboard" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`} 
+              data-testid="nav-dashboard"
+            >
               <i className="fas fa-tachometer-alt w-4"></i>
               Dashboard
-            </a>
-            <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-sm" data-testid="nav-nexus-core">
+            </button>
+            <button 
+              onClick={() => setActiveTab("nexus-core")} 
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm ${
+                activeTab === "nexus-core" 
+                  ? "bg-primary text-primary-foreground font-medium" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`} 
+              data-testid="nav-nexus-core"
+            >
               <i className="fas fa-brain w-4"></i>
               NEXUS Core
-            </a>
-            <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-sm" data-testid="nav-knowledge">
+            </button>
+            <button 
+              onClick={() => setActiveTab("knowledge")} 
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm ${
+                activeTab === "knowledge" 
+                  ? "bg-primary text-primary-foreground font-medium" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`} 
+              data-testid="nav-knowledge"
+            >
               <i className="fas fa-project-diagram w-4"></i>
               Knowledge Graph
-            </a>
-            <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-sm" data-testid="nav-social">
+            </button>
+            <button 
+              onClick={() => setActiveTab("social")} 
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm ${
+                activeTab === "social" 
+                  ? "bg-primary text-primary-foreground font-medium" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`} 
+              data-testid="nav-social"
+            >
               <i className="fas fa-users w-4"></i>
               Social Cognition
-            </a>
-            <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-sm" data-testid="nav-temporal">
+            </button>
+            <button 
+              onClick={() => setActiveTab("temporal")} 
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm ${
+                activeTab === "temporal" 
+                  ? "bg-primary text-primary-foreground font-medium" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`} 
+              data-testid="nav-temporal"
+            >
               <i className="fas fa-clock w-4"></i>
               Temporal Awareness
-            </a>
-            <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-sm" data-testid="nav-creative">
+            </button>
+            <button 
+              onClick={() => setActiveTab("creative")} 
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm ${
+                activeTab === "creative" 
+                  ? "bg-primary text-primary-foreground font-medium" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`} 
+              data-testid="nav-creative"
+            >
               <i className="fas fa-lightbulb w-4"></i>
               Creative Intelligence
-            </a>
-            <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-sm" data-testid="nav-values">
+            </button>
+            <button 
+              onClick={() => setActiveTab("values")} 
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm ${
+                activeTab === "values" 
+                  ? "bg-primary text-primary-foreground font-medium" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`} 
+              data-testid="nav-values"
+            >
               <i className="fas fa-balance-scale w-4"></i>
               Value System
-            </a>
-            <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-sm" data-testid="nav-safety">
+            </button>
+            <button 
+              onClick={() => setActiveTab("safety")} 
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm ${
+                activeTab === "safety" 
+                  ? "bg-primary text-primary-foreground font-medium" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`} 
+              data-testid="nav-safety"
+            >
               <i className="fas fa-shield-alt w-4"></i>
               Safety Monitor
-            </a>
+            </button>
           </div>
           
           <div className="mt-8">
