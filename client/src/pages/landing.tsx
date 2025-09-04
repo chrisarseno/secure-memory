@@ -28,8 +28,13 @@ export default function LandingPage() {
       });
 
       if (response.ok) {
-        // Username verified, redirect to Google OAuth
-        window.location.href = '/api/auth/google';
+        const data = await response.json();
+        // Email verified, redirect to dashboard
+        if (data.redirect) {
+          navigate(data.redirect);
+        } else {
+          navigate('/');
+        }
       } else {
         setError('Access denied. Invalid username.');
         setIsVerifying(false);
@@ -76,7 +81,7 @@ export default function LandingPage() {
           <CardHeader className="text-center space-y-3">
             <CardTitle className="text-xl text-white">Access Verification</CardTitle>
             <CardDescription className="text-slate-400">
-              Enter your authorized username to continue
+              Enter your authorized email address to continue
             </CardDescription>
           </CardHeader>
           
@@ -127,7 +132,7 @@ export default function LandingPage() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                <span>Multi-layer access control</span>
+                <span>Direct dashboard access</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-purple-500 rounded-full" />
