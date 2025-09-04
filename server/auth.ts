@@ -58,7 +58,13 @@ export function setupAuth(app: Express) {
         if (existingUser) {
           // Ensure this is chris.mwd20
           if (existingUser.username === 'chris.mwd20') {
-            return done(null, existingUser);
+            return done(null, {
+              id: existingUser.id,
+              email: existingUser.email || '',
+              name: existingUser.name || '',
+              username: existingUser.username || '',
+              role: existingUser.role || 'admin'
+            });
           } else {
             return done(new Error('Access restricted to authorized user only'));
           }
@@ -80,7 +86,13 @@ export function setupAuth(app: Express) {
           role: 'admin'
         }).returning();
 
-        return done(null, newUser);
+        return done(null, {
+          id: newUser.id,
+          email: newUser.email || '',
+          name: newUser.name || '',
+          username: newUser.username || '',
+          role: newUser.role || 'admin'
+        });
       } catch (error) {
         console.error('Google auth error:', error);
         return done(error);
@@ -89,14 +101,24 @@ export function setupAuth(app: Express) {
   }
 
   // Passport serialization
-  passport.serializeUser((user: User, done) => {
+  passport.serializeUser((user: Express.User, done) => {
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id: string, done) => {
     try {
       const [user] = await db.select().from(users).where(eq(users.id, id));
-      done(null, user || null);
+      if (user) {
+        done(null, {
+          id: user.id,
+          email: user.email || '',
+          name: user.name || '',
+          username: user.username || '',
+          role: user.role || 'admin'
+        });
+      } else {
+        done(null, null);
+      }
     } catch (error) {
       done(error);
     }

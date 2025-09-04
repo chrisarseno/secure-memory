@@ -15,13 +15,19 @@ export function useAuth() {
 
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ['auth', 'user'],
-    queryFn: () => apiRequest('/api/auth/user'),
+    queryFn: async () => {
+      const response = await apiRequest('/api/auth/user');
+      return response;
+    },
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const logoutMutation = useMutation({
-    mutationFn: () => apiRequest('/api/auth/logout', { method: 'POST' }),
+    mutationFn: async () => {
+      const response = await fetch('/api/auth/logout', { method: 'POST' });
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.setQueryData(['auth', 'user'], null);
       queryClient.invalidateQueries({ queryKey: ['auth'] });

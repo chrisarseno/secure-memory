@@ -7,6 +7,7 @@ import { createRoutes } from "./routes";
 import { setupVite } from "./vite";
 import { LocalNEXUSSystem } from "./sage/local-sage-system";
 import { ConsciousnessBridge } from "./consciousness-bridge";
+import { setupAuth } from "./auth";
 
 const app = express();
 const server = createServer(app);
@@ -23,6 +24,9 @@ const consciousnessBridge = new ConsciousnessBridge(storage);
 
 app.use(cors());
 app.use(express.json());
+
+// Setup authentication
+setupAuth(app);
 
 // API Routes
 app.use(createRoutes(storage, localNexusSystem));
