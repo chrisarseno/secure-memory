@@ -51,8 +51,9 @@ export class HierarchicalMemory {
   // Background maintenance
   private maintenanceInterval: NodeJS.Timeout | null = null;
 
-  constructor() {
+  constructor(private storage?: any) {
     this.startBackgroundMaintenance();
+    this.loadPersistedMemory();
     console.log('🧠 Hierarchical Memory Architecture initialized');
   }
 
@@ -384,9 +385,9 @@ export class HierarchicalMemory {
     
     // Update importance scores for all blocks
     const allBlocks = [
-      ...this.hotMemory.values(),
-      ...this.warmMemory.values(),
-      ...this.coldMemory.values()
+      ...Array.from(this.hotMemory.values()),
+      ...Array.from(this.warmMemory.values()),
+      ...Array.from(this.coldMemory.values())
     ];
     
     allBlocks.forEach(block => {
@@ -399,7 +400,92 @@ export class HierarchicalMemory {
     // Clean up very old, unused blocks
     await this.cleanupOldBlocks();
     
+    // Persist critical memory to storage
+    await this.persistCriticalMemory();
+    
     console.log('✅ Memory maintenance completed');
+  }
+
+  /**
+   * Load persisted memory from storage
+   */
+  private async loadPersistedMemory(): Promise<void> {
+    if (!this.storage) {
+      console.log('📦 No storage configured - memory will not persist');
+      return;
+    }
+
+    try {
+      const persistedMemory = await this.storage.getPersistedMemory?.();
+      if (persistedMemory && persistedMemory.length > 0) {
+        console.log(`📂 Loading ${persistedMemory.length} persisted memory blocks...`);
+        
+        for (const memoryData of persistedMemory) {
+          try {
+            const block: MemoryBlock = {
+              key: memoryData.key,
+              data: JSON.parse(memoryData.data),
+              tier: memoryData.tier as MemoryTier,
+              accessCount: memoryData.accessCount || 0,
+              lastAccessed: new Date(memoryData.lastAccessed),
+              createdAt: new Date(memoryData.createdAt),
+              sizeBytes: memoryData.sizeBytes,
+              accessPattern: JSON.parse(memoryData.accessPattern || '[]'),
+              importanceScore: memoryData.importanceScore || 1.0,
+              compressionRatio: memoryData.compressionRatio || 1.0
+            };
+
+            // If compressed, store serialized data
+            if (memoryData.serializedData) {
+              block.serializedData = memoryData.serializedData;
+            }
+
+            await this.storeInTier(block, block.tier);
+          } catch (error) {
+            console.warn(`⚠️ Failed to load memory block ${memoryData.key}:`, error);
+          }
+        }
+        console.log('✅ Persistent memory loaded successfully');
+      } else {
+        console.log('📦 No persistent memory found - starting fresh');
+      }
+    } catch (error) {
+      console.error('❌ Failed to load persistent memory:', error);
+    }
+  }
+
+  /**
+   * Persist critical memory to storage
+   */
+  private async persistCriticalMemory(): Promise<void> {
+    if (!this.storage?.savePersistedMemory) return;
+
+    try {
+      // Get all blocks that should be persisted (hot + high-importance warm)
+      const criticalBlocks = [
+        ...Array.from(this.hotMemory.values()),
+        ...Array.from(this.warmMemory.values()).filter(b => b.importanceScore > 0.7)
+      ];
+
+      const persistedData = criticalBlocks.map(block => ({
+        key: block.key,
+        data: JSON.stringify(block.data),
+        tier: block.tier,
+        accessCount: block.accessCount,
+        lastAccessed: block.lastAccessed.toISOString(),
+        createdAt: block.createdAt.toISOString(),
+        sizeBytes: block.sizeBytes,
+        accessPattern: JSON.stringify(block.accessPattern),
+        importanceScore: block.importanceScore,
+        compressionRatio: block.compressionRatio,
+        serializedData: block.serializedData || null
+      }));
+
+      await this.storage.savePersistedMemory(persistedData);
+      console.log(`💾 Persisted ${persistedData.length} critical memory blocks`);
+    } catch (error) {
+      console.error('❌ Failed to persist memory:', error);
+    }
   }
 
   /**

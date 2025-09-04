@@ -45,18 +45,199 @@ if (process.env.NODE_ENV === "production") {
   setupVite(app, server);
 }
 
-// WebSocket for real-time updates
-io.on("connection", (socket) => {
-  console.log("Client connected:", socket.id);
+// Enhanced Socket.IO for real-time collaboration and monitoring
+const connectedClients = new Map<string, { userId: string | null; subscriptions: Set<string> }>();
 
-  // Send initial data
+io.on("connection", (socket) => {
+  console.log("🔗 Client connected to NEXUS collaboration system:", socket.id);
+  
+  // Initialize client state
+  connectedClients.set(socket.id, { userId: null, subscriptions: new Set() });
+
+  // Send initial connection data
   socket.emit("nexus-update", {
     type: "connection",
-    message: "Connected to Local NEXUS system",
+    message: "Connected to NEXUS Unified System",
+    capabilities: [
+      "consciousness_monitoring",
+      "collaborative_learning", 
+      "knowledge_sharing",
+      "multi_modal_processing",
+      "real_time_metrics"
+    ]
+  });
+
+  // Authentication for protected features
+  socket.on("authenticate", (data) => {
+    if (data.userId === 'chris.mwd20') { // Single-user system
+      const client = connectedClients.get(socket.id);
+      if (client) {
+        client.userId = data.userId;
+        socket.emit("auth-success", { message: "Authenticated for advanced features" });
+        console.log(`✅ Client ${socket.id} authenticated as ${data.userId}`);
+      }
+    } else {
+      socket.emit("auth-failed", { message: "Unauthorized access" });
+    }
+  });
+
+  // Subscribe to consciousness monitoring
+  socket.on("subscribe-consciousness", () => {
+    const client = connectedClients.get(socket.id);
+    if (client?.userId) {
+      client.subscriptions.add("consciousness");
+      socket.join("consciousness-monitoring");
+      socket.emit("subscription-confirmed", { type: "consciousness" });
+      console.log(`📡 Client ${socket.id} subscribed to consciousness monitoring`);
+    } else {
+      socket.emit("auth-required", { message: "Authentication required for consciousness monitoring" });
+    }
+  });
+
+  // Subscribe to learning system updates
+  socket.on("subscribe-learning", () => {
+    const client = connectedClients.get(socket.id);
+    if (client?.userId) {
+      client.subscriptions.add("learning");
+      socket.join("learning-updates");
+      socket.emit("subscription-confirmed", { type: "learning" });
+      console.log(`🧠 Client ${socket.id} subscribed to learning updates`);
+    } else {
+      socket.emit("auth-required", { message: "Authentication required for learning updates" });
+    }
+  });
+
+  // Collaborative query processing
+  socket.on("collaborative-query", async (data) => {
+    const client = connectedClients.get(socket.id);
+    if (!client?.userId) {
+      socket.emit("auth-required", { message: "Authentication required for collaborative queries" });
+      return;
+    }
+
+    try {
+      console.log(`🤝 Processing collaborative query from ${client.userId}`);
+      
+      // Process with local AI system
+      const aiService = localNexusSystem.getAIService();
+      const result = await aiService.generateResponse(
+        data.query, 
+        'collaborative', 
+        data.temperature || 0.7, 
+        data.maxTokens || 800
+      );
+
+      socket.emit("collaborative-response", {
+        queryId: data.queryId,
+        response: result.content,
+        confidence: result.confidence,
+        model: result.model,
+        processingTime: result.generationTimeMs,
+        timestamp: Date.now()
+      });
+
+      // Broadcast to other authenticated collaborators if requested
+      if (data.shareWithOthers) {
+        socket.to("consciousness-monitoring").emit("shared-query-result", {
+          fromUser: client.userId,
+          query: data.query.substring(0, 100) + (data.query.length > 100 ? '...' : ''),
+          response: result.content.substring(0, 200) + (result.content.length > 200 ? '...' : ''),
+          timestamp: Date.now()
+        });
+      }
+    } catch (error) {
+      socket.emit("query-error", {
+        message: "Failed to process collaborative query",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Knowledge contribution system
+  socket.on("contribute-knowledge", async (data) => {
+    const client = connectedClients.get(socket.id);
+    if (!client?.userId) {
+      socket.emit("auth-required", { message: "Authentication required for knowledge contributions" });
+      return;
+    }
+
+    try {
+      console.log(`📚 Knowledge contribution from ${client.userId}`);
+      
+      // Add knowledge to the system
+      const knowledgeNode = await localNexusSystem.addKnowledge(
+        data.content,
+        data.type || 'user_contribution',
+        { 
+          contributedBy: client.userId,
+          contributionTimestamp: new Date(),
+          confidence: data.confidence || 0.8,
+          ...data.metadata 
+        },
+        data.sources || []
+      );
+
+      socket.emit("knowledge-accepted", {
+        nodeId: knowledgeNode.id,
+        message: "Knowledge contribution successfully integrated",
+        impact: "Knowledge graph updated with new insights"
+      });
+
+      // Notify other collaborators
+      socket.to("consciousness-monitoring").emit("knowledge-shared", {
+        fromUser: client.userId,
+        content: data.content.substring(0, 150) + (data.content.length > 150 ? '...' : ''),
+        type: data.type,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      socket.emit("contribution-error", {
+        message: "Failed to process knowledge contribution",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Consciousness sharing protocol
+  socket.on("share-consciousness", async (data) => {
+    const client = connectedClients.get(socket.id);
+    if (!client?.userId) {
+      socket.emit("auth-required", { message: "Authentication required for consciousness sharing" });
+      return;
+    }
+
+    try {
+      console.log(`🧠 Consciousness share initiated by ${client.userId}`);
+      
+      // Create consciousness snapshot for sharing
+      const snapshot = await localNexusSystem.createConsciousnessSnapshot(
+        `Collaboration share by ${client.userId} - ${data.description || 'Real-time consciousness state'}`
+      );
+
+      // Broadcast to collaborators
+      socket.to("consciousness-monitoring").emit("consciousness-shared", {
+        fromUser: client.userId,
+        snapshotId: snapshot.id,
+        consciousnessLevel: snapshot.metadata.consciousnessLevel,
+        insights: data.insights || [],
+        sharedAt: Date.now()
+      });
+
+      socket.emit("consciousness-share-complete", {
+        message: "Consciousness state shared with collaborators",
+        snapshotId: snapshot.id
+      });
+    } catch (error) {
+      socket.emit("share-error", {
+        message: "Failed to share consciousness",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
   });
 
   socket.on("disconnect", () => {
-    console.log("Client disconnected:", socket.id);
+    connectedClients.delete(socket.id);
+    console.log("🔌 Client disconnected from NEXUS collaboration system:", socket.id);
   });
 });
 

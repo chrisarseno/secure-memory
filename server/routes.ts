@@ -363,8 +363,102 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any) {
       }
     });
 
-    // Consciousness backup and transfer endpoints
-    router.post("/api/nexus/consciousness/snapshot", async (req: Request, res: Response) => {
+    // Multi-modal processing endpoints - REQUIRE AUTHENTICATION
+    router.post('/api/nexus/analyze/image', requireAuth, async (req: Request, res: Response) => {
+      try {
+        const { imageData, prompt } = req.body;
+        
+        if (!imageData) {
+          return res.status(400).json({ 
+            error: 'Image data required',
+            details: 'Please provide base64 encoded image data'
+          });
+        }
+
+        const result = await localAI.analyzeImage(imageData, prompt);
+        res.json({
+          success: true,
+          analysis: result.content,
+          confidence: result.confidence,
+          model: result.model,
+          metadata: result.metadata,
+          processingTime: result.generationTimeMs,
+          cost: result.cost
+        });
+      } catch (error: any) {
+        console.error('❌ Image analysis endpoint error:', error);
+        res.status(500).json({ 
+          error: 'Image analysis failed',
+          details: error.message
+        });
+      }
+    });
+
+    router.post('/api/nexus/analyze/audio', requireAuth, async (req: Request, res: Response) => {
+      try {
+        const { audioData, format } = req.body;
+        
+        if (!audioData) {
+          return res.status(400).json({ 
+            error: 'Audio data required',
+            details: 'Please provide audio buffer data'
+          });
+        }
+
+        const audioBuffer = Buffer.from(audioData, 'base64');
+        const result = await localAI.transcribeAudio(audioBuffer, format || 'wav');
+        
+        res.json({
+          success: true,
+          transcription: result.content,
+          confidence: result.confidence,
+          model: result.model,
+          metadata: result.metadata,
+          processingTime: result.generationTimeMs,
+          cost: result.cost
+        });
+      } catch (error: any) {
+        console.error('❌ Audio transcription endpoint error:', error);
+        res.status(500).json({ 
+          error: 'Audio transcription failed',
+          details: error.message
+        });
+      }
+    });
+
+    router.post('/api/nexus/analyze/document', requireAuth, async (req: Request, res: Response) => {
+      try {
+        const { content, docType } = req.body;
+        
+        if (!content) {
+          return res.status(400).json({ 
+            error: 'Document content required',
+            details: 'Please provide document content to analyze'
+          });
+        }
+
+        const result = await localAI.analyzeDocument(content, docType || 'text');
+        
+        res.json({
+          success: true,
+          analysis: result.content,
+          confidence: result.confidence,
+          model: result.model,
+          metadata: result.metadata,
+          processingTime: result.generationTimeMs,
+          cost: result.cost
+        });
+      } catch (error: any) {
+        console.error('❌ Document analysis endpoint error:', error);
+        res.status(500).json({ 
+          error: 'Document analysis failed',
+          details: error.message
+        });
+      }
+    });
+
+    // Consciousness backup and transfer endpoints - REQUIRE AUTHENTICATION
+    router.post("/api/nexus/consciousness/snapshot", requireAuth, async (req: Request, res: Response) => {
       try {
         const { description } = req.body;
         const snapshot = await localNexusSystem.createConsciousnessSnapshot(description);
@@ -377,7 +471,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any) {
       }
     });
 
-    router.post("/api/nexus/consciousness/restore", async (req: Request, res: Response) => {
+    router.post("/api/nexus/consciousness/restore", requireAuth, async (req: Request, res: Response) => {
       try {
         const { snapshotId } = req.body;
         const result = await localNexusSystem.restoreFromSnapshot(snapshotId);
@@ -390,7 +484,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any) {
       }
     });
 
-    router.get("/api/nexus/consciousness/snapshots", async (req: Request, res: Response) => {
+    router.get("/api/nexus/consciousness/snapshots", requireAuth, async (req: Request, res: Response) => {
       try {
         const snapshots = await localNexusSystem.listSnapshots();
         res.json(snapshots);
@@ -402,7 +496,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any) {
       }
     });
 
-    router.get("/api/nexus/consciousness/backup-stats", async (req: Request, res: Response) => {
+    router.get("/api/nexus/consciousness/backup-stats", requireAuth, async (req: Request, res: Response) => {
       try {
         const stats = await localNexusSystem.getBackupStats();
         res.json(stats);
@@ -414,7 +508,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any) {
       }
     });
 
-    router.post("/api/nexus/consciousness/transfer", async (req: Request, res: Response) => {
+    router.post("/api/nexus/consciousness/transfer", requireAuth, async (req: Request, res: Response) => {
       try {
         const { targetSystem, protocol } = req.body;
         const result = await localNexusSystem.transferConsciousness(targetSystem, protocol);
