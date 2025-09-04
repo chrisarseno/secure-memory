@@ -133,7 +133,7 @@ export function setupAuth(app: Express) {
   // Username verification endpoint
   app.post('/api/auth/verify-username', (req, res) => {
     const { username } = req.body;
-    if (username === 'chris.mwd20') {
+    if (username === 'chris.mwd20@gmail.com') {
       req.session.usernameVerified = true;
       res.json({ success: true });
     } else {
