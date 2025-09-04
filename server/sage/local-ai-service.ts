@@ -103,33 +103,55 @@ export class LocalAIService {
   }
 
   private async scanOllamaModels() {
-    try {
-      // First try Ollama
-      const { stdout } = await execAsync('ollama list');
-      const lines = stdout.split('\n').slice(1); // Skip header
-      
-      console.log('🤖 Available Ollama models:');
-      for (const line of lines) {
-        if (line.trim()) {
-          const modelName = line.split(/\s+/)[0];
-          console.log(`  - ${modelName}`);
-          
-          // Update model status if we have it in our list
-          for (const [id, model] of this.availableModels) {
-            if (modelName.includes(model.name.toLowerCase().replace(/\s+/g, ''))) {
-              model.status = 'ready';
-              console.log(`  ✅ ${model.name} ready`);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.log('ℹ️  Ollama not found - checking for Jan models...');
-      await this.scanJanModels();
+    // Scan both Ollama and Jan models simultaneously
+    const [ollamaFound, janFound] = await Promise.all([
+      this.checkOllamaModels(),
+      this.checkJanModels()
+    ]);
+    
+    if (!ollamaFound && !janFound) {
+      console.log('ℹ️  No external models found - using intelligent fallback processing');
+      this.setupFallbackModels();
+    } else {
+      console.log(`🎯 Model discovery complete: ${ollamaFound ? 'Ollama ✅' : ''} ${janFound ? 'Jan ✅' : ''}`);
     }
   }
 
-  private async scanJanModels() {
+  private async checkOllamaModels(): Promise<boolean> {
+    try {
+      const { stdout } = await execAsync('ollama list');
+      const lines = stdout.split('\n').slice(1); // Skip header
+      
+      if (lines.some(line => line.trim())) {
+        console.log('🤖 Available Ollama models:');
+        let foundAny = false;
+        
+        for (const line of lines) {
+          if (line.trim()) {
+            const modelName = line.split(/\s+/)[0];
+            console.log(`  - ${modelName}`);
+            foundAny = true;
+            
+            // Update model status if we have it in our list
+            for (const [id, model] of this.availableModels) {
+              if (modelName.includes(model.name.toLowerCase().replace(/\s+/g, ''))) {
+                model.status = 'ready';
+                model.type = 'ollama'; // Ensure it's marked as Ollama
+                console.log(`  ✅ ${model.name} ready (Ollama)`);
+              }
+            }
+          }
+        }
+        return foundAny;
+      }
+      return false;
+    } catch (error) {
+      console.log('ℹ️  Ollama not available');
+      return false;
+    }
+  }
+
+  private async checkJanModels(): Promise<boolean> {
     try {
       // Check common Jan model locations
       const janPaths = [
@@ -155,35 +177,48 @@ export class LocalAIService {
               const modelName = modelPath.split('/').pop()?.replace('.gguf', '') || 'unknown';
               console.log(`  - ${modelName}`);
               
-              // Create Jan model entries
+              // Create Jan model entries (add to existing models)
               const janModel: LocalModelInfo = {
-                id: `jan_${modelName.toLowerCase()}`,
+                id: `jan_${modelName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
                 name: `Jan ${modelName}`,
                 type: 'llamacpp',
                 capabilities: ['reasoning', 'analysis', 'creative'],
                 memoryMB: 4096,
                 status: 'ready',
-                specialized: 'reasoning'
+                specialized: this.detectModelSpecialization(modelName)
               };
               
               this.availableModels.set(janModel.id, janModel);
-              console.log(`  ✅ ${janModel.name} ready`);
+              this.modelPerformance.set(janModel.id, [0.8]); // Default performance
+              console.log(`  ✅ ${janModel.name} ready (Jan)`);
             }
             foundModels = true;
-            break;
           }
         } catch (e) {
           // Continue to next path
         }
       }
       
-      if (!foundModels) {
-        console.log('ℹ️  No Jan models found - using intelligent fallback processing');
-        this.setupFallbackModels();
-      }
+      return foundModels;
     } catch (error) {
-      console.log('⚠️  Jan model scan failed - using fallback local processing');
-      this.setupFallbackModels();
+      console.log('⚠️  Jan model scan failed');
+      return false;
+    }
+  }
+
+  private detectModelSpecialization(modelName: string): string {
+    const name = modelName.toLowerCase();
+    
+    if (name.includes('code') || name.includes('coding') || name.includes('developer')) {
+      return 'analysis';
+    } else if (name.includes('creative') || name.includes('writer') || name.includes('story')) {
+      return 'creative';
+    } else if (name.includes('reasoning') || name.includes('logic') || name.includes('math')) {
+      return 'reasoning';
+    } else if (name.includes('verify') || name.includes('check') || name.includes('fact')) {
+      return 'verification';
+    } else {
+      return 'reasoning'; // Default
     }
   }
 
@@ -327,17 +362,37 @@ export class LocalAIService {
       .filter(m => m.specialized === taskType && m.status === 'ready');
     
     if (specializedModels.length > 0) {
-      // Select based on performance history
-      return specializedModels.reduce((best, current) => {
-        const bestPerf = this.getAveragePerformance(best.id);
-        const currentPerf = this.getAveragePerformance(current.id);
-        return currentPerf > bestPerf ? current : best;
-      });
+      // Prefer Ollama > Jan > Fallback, then sort by performance
+      return specializedModels.sort((a, b) => {
+        // Type preference: ollama > llamacpp (Jan) > transformers
+        const typeScore = (model: LocalModelInfo) => {
+          if (model.type === 'ollama') return 3;
+          if (model.type === 'llamacpp') return 2;
+          return 1;
+        };
+        
+        const typeScoreDiff = typeScore(b) - typeScore(a);
+        if (typeScoreDiff !== 0) return typeScoreDiff;
+        
+        // Then by performance
+        const bestPerf = this.getAveragePerformance(a.id);
+        const currentPerf = this.getAveragePerformance(b.id);
+        return currentPerf - bestPerf;
+      })[0];
     }
 
-    // Fallback to any available model
+    // Fallback to any available model (prefer external models over fallback)
     const availableModels = Array.from(this.availableModels.values())
-      .filter(m => m.status === 'ready');
+      .filter(m => m.status === 'ready')
+      .sort((a, b) => {
+        // Prefer Ollama > Jan > Fallback
+        const typeScore = (model: LocalModelInfo) => {
+          if (model.type === 'ollama') return 3;
+          if (model.type === 'llamacpp') return 2;
+          return 1;
+        };
+        return typeScore(b) - typeScore(a);
+      });
     
     return availableModels[0] || this.availableModels.get('fallback')!;
   }
