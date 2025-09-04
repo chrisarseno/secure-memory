@@ -4,6 +4,7 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
+packages = ["python311", "python311Packages.pip", "python311Packages.numpy", "python311Packages.scipy", "python311Packages.scikit-learn", "python311Packages.networkx"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -39,4 +40,4 @@ args = "npm run dev"
 waitForPort = 5000
 
 [agent]
-integrations = ["javascript_log_in_with_replit==1.0.0", "javascript_database==1.0.0", "javascript_openai==1.0.0", "javascript_websocket==1.0.0"]
+integrations = ["javascript_websocket==1.0.0", "javascript_log_in_with_replit==1.0.0", "javascript_database==1.0.0", "javascript_openai==1.0.0"]

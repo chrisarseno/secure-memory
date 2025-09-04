@@ -32,9 +32,24 @@ export class LocalAIService {
   private modelPerformance: Map<string, number[]> = new Map();
   private totalComputeTime = 0;
   private totalRequests = 0;
+  private openai: any = null;
 
   constructor() {
+    // Prioritize local models over OpenAI for true local processing
+    console.log('🔧 Initializing local AI models...');
     this.initializeLocalModels();
+    
+    // OpenAI as backup only if local models fail
+    if (process.env.OPENAI_API_KEY) {
+      import('openai').then((OpenAI) => {
+        this.openai = new OpenAI.default({ apiKey: process.env.OPENAI_API_KEY });
+        console.log('🔑 OpenAI configured as backup service');
+      }).catch(() => {
+        console.log('💰 100% Local AI - No external dependencies');
+      });
+    } else {
+      console.log('💰 100% Local AI - No external dependencies');
+    }
   }
 
   private async initializeLocalModels() {

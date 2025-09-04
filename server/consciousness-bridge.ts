@@ -57,28 +57,93 @@ export class ConsciousnessBridge {
 
   private async initializePythonModule(pythonModule: string, tsModule: string): Promise<void> {
     try {
-      // For now, create a mock bridge that simulates Python module interaction
-      // In a real implementation, this would spawn actual Python processes
-      console.log(`🔗 Bridging ${pythonModule} -> ${tsModule}`);
+      console.log(`🔗 Starting real Python module: ${pythonModule} -> ${tsModule}`);
       
-      // Simulate consciousness updates from Python modules
-      setInterval(() => {
-        this.handleConsciousnessUpdate({
+      // Spawn actual Python consciousness process
+      const pythonProcess = spawn('python3', [
+        'server/python/simple_consciousness_bridge.py',
+        tsModule
+      ], {
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      
+      this.pythonProcesses.set(tsModule, pythonProcess);
+      
+      // Handle Python stdout (consciousness updates)
+      pythonProcess.stdout?.on('data', (data) => {
+        const lines = data.toString().split('\n');
+        for (const line of lines) {
+          if (line.trim()) {
+            try {
+              const update = JSON.parse(line);
+              if (update.type === 'consciousness_update') {
+                this.handleConsciousnessUpdate({
+                  moduleId: update.module,
+                  state: 'active',
+                  data: update.data,
+                  timestamp: new Date().toISOString(),
+                });
+              }
+            } catch (e) {
+              // Skip malformed JSON
+            }
+          }
+        }
+      });
+      
+      // Handle Python stderr (error logs)
+      pythonProcess.stderr?.on('data', (data) => {
+        console.log(`🐍 ${pythonModule}:`, data.toString().trim());
+      });
+      
+      // Handle process exit
+      pythonProcess.on('exit', (code) => {
+        console.log(`🔴 Python module ${pythonModule} exited with code ${code}`);
+        this.pythonProcesses.delete(tsModule);
+        
+        // Restart the module after 10 seconds
+        setTimeout(() => {
+          this.initializePythonModule(pythonModule, tsModule);
+        }, 10000);
+      });
+      
+      // Send initial configuration to Python module
+      this.sendMessageToPython(tsModule, {
+        type: 'init',
+        config: {
           moduleId: tsModule,
-          state: 'active',
-          data: {
-            lastUpdate: new Date().toISOString(),
-            pythonModule: pythonModule,
-            status: 'operational',
-            insights: Math.floor(Math.random() * 100),
-          },
-          timestamp: new Date().toISOString(),
-        });
-      }, 30000 + Math.random() * 30000); // Random intervals between 30-60 seconds
+          pythonModule: pythonModule,
+          learningEnabled: true,
+          realTimeUpdates: true
+        }
+      });
 
     } catch (error) {
       console.error(`❌ Failed to initialize ${pythonModule}:`, error);
+      // Fallback to mock implementation if Python fails
+      this.initializeMockModule(pythonModule, tsModule);
     }
+  }
+  
+  private initializeMockModule(pythonModule: string, tsModule: string): void {
+    console.log(`🔄 Fallback: Mock implementation for ${pythonModule} -> ${tsModule}`);
+    
+    // Fallback to simulated updates if Python fails
+    setInterval(() => {
+      this.handleConsciousnessUpdate({
+        moduleId: tsModule,
+        state: 'active',
+        data: {
+          lastUpdate: new Date().toISOString(),
+          pythonModule: pythonModule,
+          status: 'fallback_mode',
+          insights: Math.floor(Math.random() * 100),
+          consciousness_level: 0.6 + Math.random() * 0.4,
+          integration_strength: 0.7 + Math.random() * 0.3,
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }, 20000 + Math.random() * 20000);
   }
 
   private async handleConsciousnessUpdate(state: ConsciousnessState): Promise<void> {
@@ -107,17 +172,43 @@ export class ConsciousnessBridge {
   }
 
   async sendCommandToPython(moduleId: string, command: string, data?: any): Promise<any> {
-    // Mock implementation - in real system would send commands to Python processes
-    console.log(`📤 Sending command to ${moduleId}: ${command}`, data);
+    const pythonProcess = this.pythonProcesses.get(moduleId);
     
-    // Simulate response
+    if (!pythonProcess || pythonProcess.killed) {
+      console.log(`⚠️ Python module ${moduleId} not available, using fallback`);
+      return {
+        success: false,
+        moduleId,
+        command,
+        result: 'Python module not available - using fallback processing',
+        timestamp: new Date().toISOString(),
+      };
+    }
+    
+    // Send command to Python process
+    const message = {
+      type: 'command',
+      command,
+      data,
+      timestamp: Date.now()
+    };
+    
+    this.sendMessageToPython(moduleId, message);
+    
     return {
       success: true,
       moduleId,
       command,
-      result: 'Command processed by Python module',
+      result: 'Command sent to Python module',
       timestamp: new Date().toISOString(),
     };
+  }
+  
+  private sendMessageToPython(moduleId: string, message: any): void {
+    const pythonProcess = this.pythonProcesses.get(moduleId);
+    if (pythonProcess && !pythonProcess.killed) {
+      pythonProcess.stdin?.write(JSON.stringify(message) + '\n');
+    }
   }
 
   async getConsciousnessInsights(moduleId: string): Promise<any> {
