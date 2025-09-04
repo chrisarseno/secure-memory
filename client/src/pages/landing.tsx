@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +12,7 @@ export default function LandingPage() {
   const [error, setError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
 
   const handleUsernameSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,17 +31,23 @@ export default function LandingPage() {
 
       if (response.ok) {
         const data = await response.json();
-        // Email verified, redirect to dashboard
-        if (data.redirect) {
-          navigate(data.redirect);
-        } else {
-          navigate('/');
-        }
+        // Email verified, invalidate auth queries to refresh state
+        queryClient.invalidateQueries({ queryKey: ['auth'] });
+        // Small delay to allow queries to refresh
+        setTimeout(() => {
+          if (data.redirect) {
+            navigate(data.redirect);
+          } else {
+            navigate('/');
+          }
+        }, 100);
       } else {
-        setError('Access denied. Invalid username.');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        setError(`Access denied. ${errorData.error || 'Invalid email address.'}`);
         setIsVerifying(false);
       }
     } catch (error) {
+      console.error('Authentication error:', error);
       setError('Connection error. Please try again.');
       setIsVerifying(false);
     }
