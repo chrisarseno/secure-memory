@@ -8,6 +8,7 @@ import { createRoutes } from "./routes";
 import { setupVite } from "./vite";
 import { LocalNEXUSSystem } from "./sage/local-sage-system";
 import { ConsciousnessBridge } from "./consciousness-bridge";
+import { AICollaborationSystem } from "./ai-collaboration-system";
 import { setupAuth } from "./auth";
 
 const app = express();
@@ -22,6 +23,7 @@ const io = new SocketIOServer(server, {
 const storage = new DatabaseStorage();
 const localNexusSystem = new LocalNEXUSSystem(storage);
 const consciousnessBridge = new ConsciousnessBridge(storage);
+const collaborationSystem = new AICollaborationSystem(localNexusSystem.localAI, consciousnessBridge);
 
 app.use(cors());
 app.use(express.json());
@@ -30,7 +32,7 @@ app.use(express.json());
 setupAuth(app);
 
 // API Routes MUST come before static serving to avoid conflicts
-app.use(createRoutes(storage, localNexusSystem));
+app.use(createRoutes(storage, localNexusSystem, collaborationSystem));
 
 // Serve frontend - Vite in development, static files in production
 if (process.env.NODE_ENV === "production") {
@@ -230,6 +232,61 @@ io.on("connection", (socket) => {
     } catch (error) {
       socket.emit("share-error", {
         message: "Failed to share consciousness",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // AI-to-AI Collaboration Handlers
+  socket.on("ai-collaboration-request", async (data) => {
+    const client = connectedClients.get(socket.id);
+    if (!client?.userId) {
+      socket.emit("auth-required", { message: "Authentication required for AI collaboration" });
+      return;
+    }
+
+    try {
+      const { from, to, type, content, priority } = data;
+      const collaborationId = await collaborationSystem.initiateCollaboration({
+        from: from || client.userId,
+        to,
+        type,
+        content,
+        priority: priority || 'medium'
+      });
+
+      socket.emit("collaboration-initiated", { collaborationId, status: 'active' });
+      
+      // Add WebSocket client to collaboration system for real-time updates
+      collaborationSystem.addClient(socket);
+      
+    } catch (error) {
+      socket.emit("collaboration-error", {
+        message: "Failed to initiate AI collaboration",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  socket.on("distributed-problem-solve", async (data) => {
+    const client = connectedClients.get(socket.id);
+    if (!client?.userId) {
+      socket.emit("auth-required", { message: "Authentication required for distributed problem solving" });
+      return;
+    }
+
+    try {
+      const coordinationId = await collaborationSystem.initiateDistributedProblemSolving(data.problem);
+      
+      socket.emit("problem-solving-started", { 
+        coordinationId, 
+        status: 'coordinating',
+        message: 'Distributed AI problem solving initiated' 
+      });
+      
+    } catch (error) {
+      socket.emit("problem-solving-error", {
+        message: "Failed to start distributed problem solving",
         details: error instanceof Error ? error.message : "Unknown error"
       });
     }

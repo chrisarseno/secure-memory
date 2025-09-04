@@ -4,7 +4,7 @@ import { insertActivityEventSchema, insertCollaborationMessageSchema, emergencyA
 import { z } from "zod";
 import { requireAuth } from "./auth";
 
-export function createRoutes(storage: IStorage, localNexusSystem?: any) {
+export function createRoutes(storage: IStorage, localNexusSystem?: any, collaborationSystem?: any) {
   const router = express.Router();
 
 
@@ -516,6 +516,69 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any) {
       } catch (error) {
         res.status(500).json({
           error: "Failed to transfer consciousness",
+          details: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    });
+  }
+
+  // AI Collaboration System Routes
+  if (collaborationSystem) {
+    // Get agent status
+    router.get("/api/collaboration/agents", requireAuth, async (req: Request, res: Response) => {
+      try {
+        const agents = collaborationSystem.getAgentStatus();
+        res.json(agents);
+      } catch (error) {
+        res.status(500).json({
+          error: "Failed to get agent status",
+          details: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    });
+
+    // Get active collaborations
+    router.get("/api/collaboration/active", requireAuth, async (req: Request, res: Response) => {
+      try {
+        const collaborations = collaborationSystem.getActiveCollaborations();
+        res.json(collaborations);
+      } catch (error) {
+        res.status(500).json({
+          error: "Failed to get active collaborations", 
+          details: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    });
+
+    // Initiate AI-to-AI collaboration
+    router.post("/api/collaboration/initiate", requireAuth, async (req: Request, res: Response) => {
+      try {
+        const { from, to, type, content, priority = 'medium' } = req.body;
+        const collaborationId = await collaborationSystem.initiateCollaboration({
+          from,
+          to,
+          type,
+          content,
+          priority
+        });
+        res.json({ collaborationId, status: 'initiated' });
+      } catch (error) {
+        res.status(500).json({
+          error: "Failed to initiate collaboration",
+          details: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    });
+
+    // Start distributed problem solving
+    router.post("/api/collaboration/problem-solve", requireAuth, async (req: Request, res: Response) => {
+      try {
+        const { problem } = req.body;
+        const coordinationId = await collaborationSystem.initiateDistributedProblemSolving(problem);
+        res.json({ coordinationId, status: 'started' });
+      } catch (error) {
+        res.status(500).json({
+          error: "Failed to start distributed problem solving",
           details: error instanceof Error ? error.message : "Unknown error"
         });
       }

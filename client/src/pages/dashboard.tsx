@@ -7,6 +7,7 @@ import SafetyMonitor from "@/components/safety-monitor";
 import KnowledgeGraphVisualization from "@/components/knowledge-graph-viz";
 import AICollaboration from "@/components/ai-collaboration";
 import LearningControlPanel from "@/components/consciousness/learning-control-panel";
+import AIAgentControl from "@/components/consciousness/ai-agent-control";
 import { ConsciousnessContinuityPanel } from "@/components/consciousness-continuity-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -216,9 +217,10 @@ export default function Dashboard() {
             </div>
           </div>
           
-          {/* Self-Learning Agent */}
-          <div className="mt-8">
+          {/* AI Collaboration & Learning Systems */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mt-8">
             <LearningControlPanel />
+            <AIAgentControl />
           </div>
           
           {/* Consciousness Continuity */}
