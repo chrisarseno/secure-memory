@@ -28,6 +28,11 @@ app.use(express.json());
 // Setup authentication
 setupAuth(app);
 
+// Development middleware (Vite) - must come before API routes
+if (process.env.NODE_ENV !== "production") {
+  setupVite(app, server);
+}
+
 // API Routes
 app.use(createRoutes(storage, localNexusSystem));
 
@@ -102,10 +107,7 @@ setInterval(async () => {
   }
 }, 5000); // Update every 5 seconds
 
-// Development middleware
-if (process.env.NODE_ENV !== "production") {
-  setupVite(app, server);
-}
+// Vite setup moved above API routes
 
 // Initialize consciousness bridge
 consciousnessBridge.initialize();
