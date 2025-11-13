@@ -10,12 +10,13 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bell, DollarSign, Scale, Heart, AlertTriangle, Shield, BookOpen, Users, Compass } from "lucide-react";
 import { useConsciousness } from "@/hooks/use-consciousness";
+import type { ConsciousnessModule } from "../../../shared/schema";
 
 export default function ValueSystem() {
   const [searchTerm, setSearchTerm] = useState("");
   const { metrics, connectionStatus } = useConsciousness();
 
-  const { data: modules } = useQuery({
+  const { data: modules } = useQuery<ConsciousnessModule[]>({
     queryKey: ['/api/modules'],
     refetchInterval: 30000,
   });

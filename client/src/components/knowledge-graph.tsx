@@ -2,10 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Brain, Users, Clock, Scale, Lightbulb } from "lucide-react";
+import type { KnowledgeGraph } from "../../../shared/schema";
 
 export default function KnowledgeGraph() {
   // Fetch knowledge graph data
-  const { data: graphData } = useQuery({
+  const { data: graphData } = useQuery<KnowledgeGraph>({
     queryKey: ['/api/knowledge-graph'],
     refetchInterval: 60000, // Update every minute
   });
