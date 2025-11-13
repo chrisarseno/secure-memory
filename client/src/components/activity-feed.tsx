@@ -8,7 +8,7 @@ export default function ActivityFeed() {
   const [activities, setActivities] = useState<ActivityEvent[]>([]);
 
   // Fetch initial activities
-  const { data: initialActivities } = useQuery({
+  const { data: initialActivities } = useQuery<ActivityEvent[]>({
     queryKey: ['/api/activities'],
     refetchInterval: 30000,
   });

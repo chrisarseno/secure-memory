@@ -2,23 +2,64 @@ import express from "express";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import compression from "compression";
+import pino from "pino";
+import pinoHttp from "pino-http";
 import path from "path";
+import { v4 as uuidv4 } from "uuid";
+import { env } from "./env";
 import { DatabaseStorage } from "./database-storage";
 import { createRoutes } from "./routes";
 import { setupVite } from "./vite";
 import { LocalNEXUSSystem } from "./sage/local-sage-system";
 import { ConsciousnessBridge } from "./consciousness-bridge";
 import { AICollaborationSystem } from "./ai-collaboration-system";
-import { setupAuth } from "./auth";
+import { setupAuth, sessionMiddleware } from "./auth";
 import { DistributedConsciousnessSystem } from "./distributed";
+import { cache } from "./cache";
+import { closeDatabasePool } from "./db";
+import { initializeSentry, setupSentryMiddleware, setupSentryErrorHandler } from "./sentry";
+import { metricsMiddleware } from "./middleware/metrics";
+import { updateConsciousnessMetrics, websocketConnectionsActive } from "./metrics";
+import { wrapMiddleware, requireWebSocketAuth, getSocketUser } from "./lib/websocket-auth";
+
+// Initialize Sentry FIRST (before any other code)
+const sentryEnabled = initializeSentry();
+
+// Initialize structured logging with validated config
+export const logger = pino({
+  level: env.LOG_LEVEL,
+  transport: env.NODE_ENV === 'development' ? {
+    target: 'pino-pretty',
+    options: {
+      colorize: true,
+      ignore: 'pid,hostname',
+      translateTime: 'SYS:standard'
+    }
+  } : undefined, // JSON in production
+});
 
 const app = express();
+
+// Sentry request handler (must be first middleware)
+if (sentryEnabled) {
+  setupSentryMiddleware(app);
+}
 const server = createServer(app);
 const io = new SocketIOServer(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"],
   },
+  // Security: Limit message size to prevent memory exhaustion
+  maxHttpBufferSize: 1024 * 1024, // 1MB max message size
+  // Connection timeout
+  connectTimeout: 45000, // 45 seconds
+  // Ping configuration for connection health
+  pingTimeout: 30000,
+  pingInterval: 25000,
 });
 
 const storage = new DatabaseStorage();
@@ -29,13 +70,13 @@ const collaborationSystem = new AICollaborationSystem(localNexusSystem.getAIServ
 // Initialize Distributed Consciousness System
 const distributedSystem = new DistributedConsciousnessSystem(
   {
-    nodeId: `nexus-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    nodeId: `nexus-${uuidv4()}`,
     address: '0.0.0.0',
     port: 5001, // Different port for node communication
     capabilities: ['consciousness-processing', 'ai-collaboration', 'multi-modal-processing'],
     consciousnessModules: [
       'global_workspace',
-      'social_cognition', 
+      'social_cognition',
       'temporal_consciousness',
       'value_learning',
       'virtue_learning',
@@ -51,14 +92,86 @@ const distributedSystem = new DistributedConsciousnessSystem(
   storage
 );
 
-app.use(cors());
-app.use(express.json());
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Allow Vite in dev
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "ws:", "wss:"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Required for Vite HMR
+}));
+
+// Rate limiting for API routes (configured from env)
+const apiLimiter = rateLimit({
+  windowMs: env.RATE_LIMIT_WINDOW_MS,
+  max: env.RATE_LIMIT_MAX_REQUESTS,
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit auth attempts
+  message: 'Too many authentication attempts, please try again later.',
+  skipSuccessfulRequests: true,
+});
+
+// Request correlation IDs for distributed tracing
+app.use((req, res, next) => {
+  const requestId = (req.headers['x-request-id'] as string) || uuidv4();
+  req.id = requestId;
+  res.setHeader('x-request-id', requestId);
+  next();
+});
+
+// Prometheus metrics tracking
+app.use(metricsMiddleware);
+
+// Apply rate limiters
+app.use('/api/', apiLimiter);
+app.use('/api/auth/', authLimiter);
+
+// Request logging with correlation IDs
+app.use(pinoHttp({
+  logger,
+  customProps: (req) => ({
+    requestId: req.id,
+  }),
+}));
+
+// Enable response compression
+app.use(compression({
+  threshold: 1024, // Only compress responses > 1KB
+  level: 6, // Compression level (0-9)
+}));
+
+app.use(cors({
+  origin: env.CORS_ORIGIN,
+  credentials: true,
+}));
+app.use(express.json({ limit: '10mb' })); // Add size limit
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Setup authentication
 setupAuth(app);
 
 // API Routes MUST come before static serving to avoid conflicts
 app.use(createRoutes(storage, localNexusSystem, collaborationSystem, distributedSystem));
+
+// Sentry error handler (must be after all routes, before error handlers)
+if (sentryEnabled) {
+  setupSentryErrorHandler(app);
+}
 
 // Serve frontend - Vite in development, static files in production
 if (process.env.NODE_ENV === "production") {
@@ -76,37 +189,50 @@ if (process.env.NODE_ENV === "production") {
 // Enhanced Socket.IO for real-time collaboration and monitoring
 const connectedClients = new Map<string, { userId: string | null; subscriptions: Set<string> }>();
 
+// WebSocket authentication middleware
+// Step 1: Share Express session with Socket.IO
+io.use(wrapMiddleware(sessionMiddleware));
+
+// Step 2: Require authentication for WebSocket connections
+io.use(requireWebSocketAuth);
+
 io.on("connection", (socket) => {
-  console.log("🔗 Client connected to NEXUS collaboration system:", socket.id);
-  
-  // Initialize client state
-  connectedClients.set(socket.id, { userId: null, subscriptions: new Set() });
+  const user = getSocketUser(socket);
+
+  if (!user) {
+    // This should never happen due to requireWebSocketAuth, but handle it anyway
+    logger.error({ socketId: socket.id }, '❌ Authenticated socket has no user data');
+    socket.disconnect(true);
+    return;
+  }
+
+  logger.info({
+    socketId: socket.id,
+    userId: user.id,
+    username: user.username
+  }, '🔗 Authenticated client connected to NEXUS');
+
+  // Initialize client state with authenticated user
+  connectedClients.set(socket.id, {
+    userId: user.id,
+    subscriptions: new Set()
+  });
 
   // Send initial connection data
   socket.emit("nexus-update", {
     type: "connection",
-    message: "Connected to NEXUS Unified System",
+    message: `Connected to NEXUS Unified System as ${user.username}`,
+    user: {
+      id: user.id,
+      username: user.username,
+    },
     capabilities: [
       "consciousness_monitoring",
-      "collaborative_learning", 
+      "collaborative_learning",
       "knowledge_sharing",
       "multi_modal_processing",
       "real_time_metrics"
     ]
-  });
-
-  // Authentication for protected features
-  socket.on("authenticate", (data) => {
-    if (data.userId === 'chris.mwd20') { // Single-user system
-      const client = connectedClients.get(socket.id);
-      if (client) {
-        client.userId = data.userId;
-        socket.emit("auth-success", { message: "Authenticated for advanced features" });
-        console.log(`✅ Client ${socket.id} authenticated as ${data.userId}`);
-      }
-    } else {
-      socket.emit("auth-failed", { message: "Unauthorized access" });
-    }
   });
 
   // Subscribe to consciousness monitoring
@@ -373,7 +499,24 @@ setInterval(async () => {
     };
 
     await storage.addMetrics(newMetrics);
-    
+
+    // Update Prometheus metrics
+    updateConsciousnessMetrics({
+      coherence: newMetrics.consciousnessCoherence,
+      creativeIntelligence: newMetrics.creativeIntelligence,
+      safetyCompliance: newMetrics.safetyCompliance,
+      learningEfficiency: newMetrics.learningEfficiency,
+      modulesOnline: newMetrics.modulesOnline,
+      totalModules: newMetrics.totalModules,
+      costPerHour: newMetrics.costPerHour,
+    });
+
+    // Update WebSocket connection metrics
+    const authenticatedConnections = Array.from(connectedClients.values()).filter(c => c.userId).length;
+    const unauthenticatedConnections = connectedClients.size - authenticatedConnections;
+    websocketConnectionsActive.set({ authenticated: 'true' }, authenticatedConnections);
+    websocketConnectionsActive.set({ authenticated: 'false' }, unauthenticatedConnections);
+
     // Broadcast to all connected clients
     io.emit("metrics-update", newMetrics);
 
@@ -415,17 +558,65 @@ setInterval(async () => {
   }
 }, 5000); // Update every 5 seconds
 
-// Vite setup moved above API routes
-
 // Initialize consciousness bridge
 consciousnessBridge.initialize();
 
 // Start autonomous NEXUS learning with local models
-console.log("🤖 Local NEXUS System initialized");
+logger.info('🤖 Local NEXUS System initialized');
 
-const PORT = parseInt(process.env.PORT || "5000", 10);
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 NEXUS (NEXUS Unified System) running on http://0.0.0.0:${PORT}`);
-  console.log(`💰 Local compute cost tracking enabled`);
-  console.log(`🏠 100% Local AI - No external dependencies`);
+server.listen(env.PORT, "0.0.0.0", () => {
+  logger.info(`🚀 NEXUS (NEXUS Unified System) running on http://0.0.0.0:${env.PORT}`);
+  logger.info(`📊 Environment: ${env.NODE_ENV}`);
+  logger.info(`🔒 Security: Helmet enabled, Rate limiting active`);
+  logger.info(`📝 Logging level: ${env.LOG_LEVEL}`);
+  logger.info(`💰 Local compute cost tracking enabled`);
+  logger.info(`🏠 100% Local AI - No external dependencies`);
+});
+
+// Graceful shutdown handling
+const gracefulShutdown = async (signal: string) => {
+  logger.info(`${signal} received, starting graceful shutdown...`);
+
+  // Stop accepting new connections
+  server.close(async () => {
+    logger.info('✅ HTTP server closed');
+
+    try {
+      // Give active requests time to complete
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      // Close Redis connection
+      await cache.close();
+
+      // Close database connection pool
+      await closeDatabasePool();
+
+      logger.info('✅ Graceful shutdown complete');
+      process.exit(0);
+    } catch (error) {
+      logger.error({ error }, 'Error during shutdown');
+      process.exit(1);
+    }
+  });
+
+  // Force exit after 30 seconds
+  setTimeout(() => {
+    logger.error('❌ Forced shutdown after timeout');
+    process.exit(1);
+  }, 30000);
+};
+
+// Handle shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  logger.fatal({ error }, 'Uncaught exception');
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.fatal({ reason, promise }, 'Unhandled rejection');
+  process.exit(1);
 });

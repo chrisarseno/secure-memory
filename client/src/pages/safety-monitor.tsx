@@ -13,6 +13,7 @@ import { Bell, DollarSign, Shield, AlertTriangle, Lock, Eye, Users, FileCheck } 
 import { ConsciousnessAPI } from "@/lib/consciousness-api";
 import { useConsciousness } from "@/hooks/use-consciousness";
 import { useToast } from "@/hooks/use-toast";
+import type { SafetyStatus as SafetyStatusType, EmergencyAction } from "../../../shared/schema";
 
 export default function SafetyMonitor() {
   const [selectedAlert, setSelectedAlert] = useState<string | null>(null);
@@ -20,13 +21,13 @@ export default function SafetyMonitor() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: safetyStatus } = useQuery({
+  const { data: safetyStatus } = useQuery<SafetyStatusType>({
     queryKey: ['/api/safety'],
     queryFn: ConsciousnessAPI.getSafetyStatus,
     refetchInterval: 5000,
   });
 
-  const { data: emergencyHistory } = useQuery({
+  const { data: emergencyHistory } = useQuery<EmergencyAction[]>({
     queryKey: ['/api/emergency/history'],
     queryFn: ConsciousnessAPI.getEmergencyHistory,
     refetchInterval: 30000,

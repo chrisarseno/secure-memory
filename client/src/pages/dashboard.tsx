@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { initializeSocket, getSocket } from "@/lib/socket";
 import { Bell, DollarSign } from "lucide-react";
-import type { ConsciousnessModule } from "../../../shared/schema";
+import type { ConsciousnessModule, SystemMetrics } from "../../../shared/schema";
 
 export default function Dashboard() {
   const [realTimeMetrics, setRealTimeMetrics] = useState<any>(null);
@@ -50,7 +50,7 @@ export default function Dashboard() {
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
-  const { data: metrics } = useQuery({
+  const { data: metrics } = useQuery<SystemMetrics>({
     queryKey: ['/api/metrics'],
     refetchInterval: 10000, // Refetch every 10 seconds
   });

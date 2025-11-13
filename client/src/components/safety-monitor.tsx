@@ -5,13 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Shield, StopCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import type { SafetyStatus } from "../../../shared/schema";
 
 export default function SafetyMonitor() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Fetch safety status
-  const { data: safetyStatus } = useQuery({
+  const { data: safetyStatus } = useQuery<SafetyStatus>({
     queryKey: ['/api/safety'],
     refetchInterval: 5000, // More frequent updates for safety
   });

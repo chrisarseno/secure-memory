@@ -1,17 +1,73 @@
 import express, { type Request, Response } from "express";
 import { IStorage } from "./storage";
 import { insertActivityEventSchema, insertCollaborationMessageSchema, emergencyActionSchema } from "../shared/schema";
+import { updateModuleSchema } from "../shared/update-schemas";
+import { successResponse, errorResponse, ErrorCode } from "./lib/response";
 import { z } from "zod";
 import { requireAuth } from "./auth";
+import { cache } from "./cache";
+import { invalidateCache } from "./cache-middleware";
+import { getMetrics, getMetricsContentType } from "./metrics";
 
 export function createRoutes(storage: IStorage, localNexusSystem?: any, collaborationSystem?: any, distributedSystem?: any) {
   const router = express.Router();
 
+  // Prometheus metrics endpoint
+  router.get("/metrics", async (req: Request, res: Response) => {
+    try {
+      const metrics = await getMetrics();
+      res.setHeader('Content-Type', getMetricsContentType());
+      res.send(metrics);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to generate metrics" });
+    }
+  });
 
-  // Consciousness Modules
+  // Health check endpoints
+  router.get("/health", (req: Request, res: Response) => {
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage()
+    });
+  });
+
+  router.get("/ready", async (req: Request, res: Response) => {
+    try {
+      // Check database connection
+      await storage.getLatestMetrics();
+
+      // Check Redis health
+      const redisHealthy = await cache.healthCheck();
+
+      res.json({
+        status: "ready",
+        timestamp: new Date().toISOString(),
+        checks: {
+          database: "ok",
+          redis: redisHealthy ? "ok" : "degraded",
+          aiSystem: localNexusSystem ? "ok" : "unavailable",
+          collaborationSystem: collaborationSystem ? "ok" : "unavailable",
+          distributedSystem: distributedSystem ? "ok" : "unavailable"
+        }
+      });
+    } catch (error) {
+      res.status(503).json({
+        status: "not ready",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Consciousness Modules (cached for 30 seconds)
   router.get("/api/modules", async (req: Request, res: Response) => {
     try {
-      const modules = await storage.getModules();
+      const modules = await cache.getOrSet(
+        'modules:all',
+        async () => await storage.getModules(),
+        30 // 30 second TTL
+      );
       res.json(modules);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch modules" });
@@ -30,35 +86,59 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
     }
   });
 
-  router.patch("/api/modules/:id", async (req: Request, res: Response) => {
+  router.patch("/api/modules/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const updates = req.body;
+      // Validate update data
+      const updates = updateModuleSchema.parse(req.body);
       const module = await storage.updateModule(req.params.id, updates);
-      res.json(module);
+
+      if (!module) {
+        return res.status(404).json(
+          errorResponse('Module not found', ErrorCode.MODULE_NOT_FOUND, null, req.id)
+        );
+      }
+
+      // Invalidate modules cache
+      await invalidateCache('modules:*');
+
+      res.json(successResponse(module, undefined, req.id));
     } catch (error) {
-      res.status(500).json({ error: "Failed to update module" });
+      if (error instanceof z.ZodError) {
+        return res.status(400).json(
+          errorResponse('Invalid update data', ErrorCode.VALIDATION_ERROR, error.errors, req.id)
+        );
+      }
+      res.status(500).json(
+        errorResponse('Failed to update module', ErrorCode.MODULE_UPDATE_FAILED, undefined, req.id)
+      );
     }
   });
 
-  // System Metrics
+  // System Metrics (cached for 5 seconds)
   router.get("/api/metrics", async (req: Request, res: Response) => {
     try {
-      const currentMetrics = await storage.getLatestMetrics();
-      
-      // Get previous metrics from 1 hour ago for real percentage changes
-      const metricsHistory = await storage.getMetricsHistory(1); // 1 hour
-      const previousMetrics = metricsHistory.length > 1 ? metricsHistory[metricsHistory.length - 2] : null;
-      
-      const response = {
-        ...currentMetrics,
-        previousMetrics: previousMetrics ? {
-          consciousnessCoherence: previousMetrics.consciousnessCoherence,
-          creativeIntelligence: previousMetrics.creativeIntelligence,
-          safetyCompliance: previousMetrics.safetyCompliance,
-          learningEfficiency: previousMetrics.learningEfficiency,
-        } : null
-      };
-      
+      const response = await cache.getOrSet(
+        'metrics:latest',
+        async () => {
+          const currentMetrics = await storage.getLatestMetrics();
+
+          // Get previous metrics from 1 hour ago for real percentage changes
+          const metricsHistory = await storage.getMetricsHistory(1); // 1 hour
+          const previousMetrics = metricsHistory.length > 1 ? metricsHistory[metricsHistory.length - 2] : null;
+
+          return {
+            ...currentMetrics,
+            previousMetrics: previousMetrics ? {
+              consciousnessCoherence: previousMetrics.consciousnessCoherence,
+              creativeIntelligence: previousMetrics.creativeIntelligence,
+              safetyCompliance: previousMetrics.safetyCompliance,
+              learningEfficiency: previousMetrics.learningEfficiency,
+            } : null
+          };
+        },
+        5 // 5 second TTL
+      );
+
       res.json(response);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch metrics" });
@@ -86,7 +166,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
     }
   });
 
-  router.post("/api/activities", async (req: Request, res: Response) => {
+  router.post("/api/activities", requireAuth, async (req: Request, res: Response) => {
     try {
       const validatedActivity = insertActivityEventSchema.parse(req.body);
       const activity = await storage.addActivity(validatedActivity);
@@ -99,45 +179,58 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
     }
   });
 
-  // Safety Status
+  // Safety Status (cached for 10 seconds)
   router.get("/api/safety", async (req: Request, res: Response) => {
     try {
-      const status = await storage.getLatestSafetyStatus();
+      const status = await cache.getOrSet(
+        'safety:latest',
+        async () => await storage.getLatestSafetyStatus(),
+        10 // 10 second TTL
+      );
       res.json(status);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch safety status" });
     }
   });
 
-  // Knowledge Graph
+  // Knowledge Graph (cached for 60 seconds)
   router.get("/api/knowledge-graph", async (req: Request, res: Response) => {
     try {
-      const graph = await storage.getKnowledgeGraph();
+      const graph = await cache.getOrSet(
+        'knowledge-graph:latest',
+        async () => await storage.getKnowledgeGraph(),
+        60 // 60 second TTL
+      );
       res.json(graph);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch knowledge graph" });
     }
   });
 
-  // Local AI Models
+  // Local AI Models (cached for 30 seconds)
   router.get("/api/local-models", async (req: Request, res: Response) => {
     try {
-      if (localNexusSystem && localNexusSystem.getAIService) {
-        const aiService = localNexusSystem.getAIService();
-        const models = aiService.getAvailableModels();
-        const modelList = Array.from(models.entries()).map(([id, model]) => ({
-          id,
-          name: model.name,
-          type: model.type,
-          status: model.status,
-          capabilities: model.capabilities,
-          memoryMB: model.memoryMB,
-          specialized: model.specialized
-        }));
-        res.json(modelList);
-      } else {
-        res.json([]);
-      }
+      const modelList = await cache.getOrSet(
+        'local-models:all',
+        async () => {
+          if (localNexusSystem && localNexusSystem.getAIService) {
+            const aiService = localNexusSystem.getAIService();
+            const models = aiService.getAvailableModels();
+            return Array.from(models.entries()).map(([id, model]) => ({
+              id,
+              name: model.name,
+              type: model.type,
+              status: model.status,
+              capabilities: model.capabilities,
+              memoryMB: model.memoryMB,
+              specialized: model.specialized
+            }));
+          }
+          return [];
+        },
+        30 // 30 second TTL
+      );
+      res.json(modelList);
     } catch (error) {
       console.error('Failed to fetch local models:', error);
       res.status(500).json({ error: "Failed to fetch local models" });
@@ -155,7 +248,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
     }
   });
 
-  router.post("/api/collaboration/messages", async (req: Request, res: Response) => {
+  router.post("/api/collaboration/messages", requireAuth, async (req: Request, res: Response) => {
     try {
       const validatedMessage = insertCollaborationMessageSchema.parse(req.body);
       const message = await storage.addCollaborationMessage(validatedMessage);
@@ -168,8 +261,8 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
     }
   });
 
-  // Emergency Actions
-  router.post("/api/emergency", async (req: Request, res: Response) => {
+  // Emergency Actions - CRITICAL: Require authentication
+  router.post("/api/emergency", requireAuth, async (req: Request, res: Response) => {
     try {
       const validatedAction = emergencyActionSchema.omit({ timestamp: true }).parse(req.body);
       const action = await storage.executeEmergencyAction(validatedAction);
@@ -192,9 +285,9 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
   });
 
 
-  // Local NEXUS Endpoints
+  // Local NEXUS Endpoints - REQUIRE AUTHENTICATION
   if (localNexusSystem) {
-    router.post("/api/nexus/execute", async (req: Request, res: Response) => {
+    router.post("/api/nexus/execute", requireAuth, async (req: Request, res: Response) => {
       try {
         const { goal, context, computeBudget } = req.body;
         const result = await localNexusSystem.executeGoal(
@@ -238,7 +331,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
       }
     });
 
-    router.post("/api/nexus/learn", async (req: Request, res: Response) => {
+    router.post("/api/nexus/learn", requireAuth, async (req: Request, res: Response) => {
       try {
         const learningCycle = await localNexusSystem.initiateLearningCycle();
         res.json({
@@ -247,14 +340,14 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
           message: `Initiated learning cycle: ${learningCycle.gaps.length} gaps identified, ${learningCycle.tasks.length} tasks generated`
         });
       } catch (error) {
-        res.status(500).json({ 
+        res.status(500).json({
           error: "Failed to initiate learning cycle",
           details: error instanceof Error ? error.message : "Unknown error"
         });
       }
     });
 
-    router.post("/api/nexus/learn/task/:taskId", async (req: Request, res: Response) => {
+    router.post("/api/nexus/learn/task/:taskId", requireAuth, async (req: Request, res: Response) => {
       try {
         const { taskId } = req.params;
         const result = await localNexusSystem.executeLearningTask(taskId);
@@ -280,15 +373,15 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
       }
     });
 
-    router.post("/api/nexus/knowledge", async (req: Request, res: Response) => {
+    router.post("/api/nexus/knowledge", requireAuth, async (req: Request, res: Response) => {
       try {
         const { content, type, metadata, sources } = req.body;
         const node = await localNexusSystem.addKnowledge(content, type, metadata, sources);
         res.json({ success: true, node });
       } catch (error) {
-        res.status(500).json({ 
-          error: "Failed to add knowledge", 
-          details: error instanceof Error ? error.message : "Unknown error" 
+        res.status(500).json({
+          error: "Failed to add knowledge",
+          details: error instanceof Error ? error.message : "Unknown error"
         });
       }
     });
@@ -306,20 +399,20 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
       }
     });
 
-    router.post("/api/nexus/contradictions/:contradictionId/resolve", async (req: Request, res: Response) => {
+    router.post("/api/nexus/contradictions/:contradictionId/resolve", requireAuth, async (req: Request, res: Response) => {
       try {
         const { contradictionId } = req.params;
         const { resolution, proposedResolution } = req.body;
         const success = await localNexusSystem.resolveContradiction(
-          contradictionId, 
-          resolution, 
+          contradictionId,
+          resolution,
           proposedResolution
         );
         res.json({ success });
       } catch (error) {
-        res.status(500).json({ 
-          error: "Failed to resolve contradiction", 
-          details: error instanceof Error ? error.message : "Unknown error" 
+        res.status(500).json({
+          error: "Failed to resolve contradiction",
+          details: error instanceof Error ? error.message : "Unknown error"
         });
       }
     });
@@ -338,8 +431,8 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
       }
     });
 
-    // Self-learning endpoints
-    router.post("/api/nexus/learning/start", async (req: Request, res: Response) => {
+    // Self-learning endpoints - REQUIRE AUTHENTICATION
+    router.post("/api/nexus/learning/start", requireAuth, async (req: Request, res: Response) => {
       try {
         const result = await localNexusSystem.startAutonomousLearning();
         res.json(result);
@@ -363,7 +456,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
       }
     });
 
-    router.post("/api/nexus/training/start", async (req: Request, res: Response) => {
+    router.post("/api/nexus/training/start", requireAuth, async (req: Request, res: Response) => {
       try {
         const result = await localNexusSystem.startIncrementalTraining();
         res.json(result);
@@ -375,7 +468,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
       }
     });
 
-    router.post("/api/nexus/learning/experience", async (req: Request, res: Response) => {
+    router.post("/api/nexus/learning/experience", requireAuth, async (req: Request, res: Response) => {
       try {
         const { taskType, input, expectedOutput, actualOutput, feedback, context } = req.body;
         await localNexusSystem.recordLearningExperience(
@@ -390,7 +483,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
       }
     });
 
-    router.post("/api/nexus/goal/enhanced", async (req: Request, res: Response) => {
+    router.post("/api/nexus/goal/enhanced", requireAuth, async (req: Request, res: Response) => {
       try {
         const { goal, context, computeBudget } = req.body;
         const result = await localNexusSystem.executeGoalWithLearning(goal, context, computeBudget);

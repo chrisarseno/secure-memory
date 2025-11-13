@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Brain, Users, Clock, Scale, Lightbulb } from "lucide-react";
 import { ConsciousnessAPI } from "@/lib/consciousness-api";
+import type { KnowledgeGraph } from "../../../../shared/schema";
 
 interface KnowledgeGraphPreviewProps {
   className?: string;
@@ -11,7 +12,7 @@ interface KnowledgeGraphPreviewProps {
 
 export default function KnowledgeGraphPreview({ className = "", height = "h-64" }: KnowledgeGraphPreviewProps) {
   // Fetch knowledge graph data
-  const { data: graphData, isLoading } = useQuery({
+  const { data: graphData, isLoading } = useQuery<KnowledgeGraph>({
     queryKey: ['/api/knowledge-graph'],
     queryFn: ConsciousnessAPI.getKnowledgeGraph,
     refetchInterval: 60000, // Update every minute

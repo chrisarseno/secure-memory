@@ -34,23 +34,27 @@ declare module 'express-session' {
   }
 }
 
+// Export session middleware for reuse (e.g., with WebSockets)
+export const sessionMiddleware = session({
+  store: new pgStore({
+    conString: process.env.DATABASE_URL,
+    createTableIfMissing: false,
+    tableName: 'sessions'
+  }),
+  secret: process.env.SESSION_SECRET!,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production', // HTTPS in production
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    httpOnly: true,
+    sameSite: 'lax', // CSRF protection
+  }
+});
+
 export function setupAuth(app: Express) {
-  // Session middleware
-  app.use(session({
-    store: new pgStore({
-      conString: process.env.DATABASE_URL,
-      createTableIfMissing: false,
-      tableName: 'sessions'
-    }),
-    secret: process.env.SESSION_SECRET || 'nexus-dev-secret-change-in-production',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: false, // Set to true in production with HTTPS
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      httpOnly: true
-    }
-  }));
+  // Apply session middleware
+  app.use(sessionMiddleware);
 
   // No passport needed for simple authentication
 
