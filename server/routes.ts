@@ -7,6 +7,38 @@ import { requireAuth } from "./auth";
 export function createRoutes(storage: IStorage, localNexusSystem?: any, collaborationSystem?: any, distributedSystem?: any) {
   const router = express.Router();
 
+  // Health check endpoints
+  router.get("/health", (req: Request, res: Response) => {
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage()
+    });
+  });
+
+  router.get("/ready", async (req: Request, res: Response) => {
+    try {
+      // Check database connection
+      await storage.getLatestMetrics();
+
+      res.json({
+        status: "ready",
+        timestamp: new Date().toISOString(),
+        checks: {
+          database: "ok",
+          aiSystem: localNexusSystem ? "ok" : "unavailable",
+          collaborationSystem: collaborationSystem ? "ok" : "unavailable",
+          distributedSystem: distributedSystem ? "ok" : "unavailable"
+        }
+      });
+    } catch (error) {
+      res.status(503).json({
+        status: "not ready",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
 
   // Consciousness Modules
   router.get("/api/modules", async (req: Request, res: Response) => {
@@ -30,7 +62,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
     }
   });
 
-  router.patch("/api/modules/:id", async (req: Request, res: Response) => {
+  router.patch("/api/modules/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const updates = req.body;
       const module = await storage.updateModule(req.params.id, updates);
@@ -86,7 +118,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
     }
   });
 
-  router.post("/api/activities", async (req: Request, res: Response) => {
+  router.post("/api/activities", requireAuth, async (req: Request, res: Response) => {
     try {
       const validatedActivity = insertActivityEventSchema.parse(req.body);
       const activity = await storage.addActivity(validatedActivity);
@@ -155,7 +187,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
     }
   });
 
-  router.post("/api/collaboration/messages", async (req: Request, res: Response) => {
+  router.post("/api/collaboration/messages", requireAuth, async (req: Request, res: Response) => {
     try {
       const validatedMessage = insertCollaborationMessageSchema.parse(req.body);
       const message = await storage.addCollaborationMessage(validatedMessage);
@@ -168,8 +200,8 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
     }
   });
 
-  // Emergency Actions
-  router.post("/api/emergency", async (req: Request, res: Response) => {
+  // Emergency Actions - CRITICAL: Require authentication
+  router.post("/api/emergency", requireAuth, async (req: Request, res: Response) => {
     try {
       const validatedAction = emergencyActionSchema.omit({ timestamp: true }).parse(req.body);
       const action = await storage.executeEmergencyAction(validatedAction);
@@ -192,9 +224,9 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
   });
 
 
-  // Local NEXUS Endpoints
+  // Local NEXUS Endpoints - REQUIRE AUTHENTICATION
   if (localNexusSystem) {
-    router.post("/api/nexus/execute", async (req: Request, res: Response) => {
+    router.post("/api/nexus/execute", requireAuth, async (req: Request, res: Response) => {
       try {
         const { goal, context, computeBudget } = req.body;
         const result = await localNexusSystem.executeGoal(
@@ -238,7 +270,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
       }
     });
 
-    router.post("/api/nexus/learn", async (req: Request, res: Response) => {
+    router.post("/api/nexus/learn", requireAuth, async (req: Request, res: Response) => {
       try {
         const learningCycle = await localNexusSystem.initiateLearningCycle();
         res.json({
@@ -247,14 +279,14 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
           message: `Initiated learning cycle: ${learningCycle.gaps.length} gaps identified, ${learningCycle.tasks.length} tasks generated`
         });
       } catch (error) {
-        res.status(500).json({ 
+        res.status(500).json({
           error: "Failed to initiate learning cycle",
           details: error instanceof Error ? error.message : "Unknown error"
         });
       }
     });
 
-    router.post("/api/nexus/learn/task/:taskId", async (req: Request, res: Response) => {
+    router.post("/api/nexus/learn/task/:taskId", requireAuth, async (req: Request, res: Response) => {
       try {
         const { taskId } = req.params;
         const result = await localNexusSystem.executeLearningTask(taskId);
@@ -280,15 +312,15 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
       }
     });
 
-    router.post("/api/nexus/knowledge", async (req: Request, res: Response) => {
+    router.post("/api/nexus/knowledge", requireAuth, async (req: Request, res: Response) => {
       try {
         const { content, type, metadata, sources } = req.body;
         const node = await localNexusSystem.addKnowledge(content, type, metadata, sources);
         res.json({ success: true, node });
       } catch (error) {
-        res.status(500).json({ 
-          error: "Failed to add knowledge", 
-          details: error instanceof Error ? error.message : "Unknown error" 
+        res.status(500).json({
+          error: "Failed to add knowledge",
+          details: error instanceof Error ? error.message : "Unknown error"
         });
       }
     });
@@ -306,20 +338,20 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
       }
     });
 
-    router.post("/api/nexus/contradictions/:contradictionId/resolve", async (req: Request, res: Response) => {
+    router.post("/api/nexus/contradictions/:contradictionId/resolve", requireAuth, async (req: Request, res: Response) => {
       try {
         const { contradictionId } = req.params;
         const { resolution, proposedResolution } = req.body;
         const success = await localNexusSystem.resolveContradiction(
-          contradictionId, 
-          resolution, 
+          contradictionId,
+          resolution,
           proposedResolution
         );
         res.json({ success });
       } catch (error) {
-        res.status(500).json({ 
-          error: "Failed to resolve contradiction", 
-          details: error instanceof Error ? error.message : "Unknown error" 
+        res.status(500).json({
+          error: "Failed to resolve contradiction",
+          details: error instanceof Error ? error.message : "Unknown error"
         });
       }
     });
@@ -338,8 +370,8 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
       }
     });
 
-    // Self-learning endpoints
-    router.post("/api/nexus/learning/start", async (req: Request, res: Response) => {
+    // Self-learning endpoints - REQUIRE AUTHENTICATION
+    router.post("/api/nexus/learning/start", requireAuth, async (req: Request, res: Response) => {
       try {
         const result = await localNexusSystem.startAutonomousLearning();
         res.json(result);
@@ -363,7 +395,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
       }
     });
 
-    router.post("/api/nexus/training/start", async (req: Request, res: Response) => {
+    router.post("/api/nexus/training/start", requireAuth, async (req: Request, res: Response) => {
       try {
         const result = await localNexusSystem.startIncrementalTraining();
         res.json(result);
@@ -375,7 +407,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
       }
     });
 
-    router.post("/api/nexus/learning/experience", async (req: Request, res: Response) => {
+    router.post("/api/nexus/learning/experience", requireAuth, async (req: Request, res: Response) => {
       try {
         const { taskType, input, expectedOutput, actualOutput, feedback, context } = req.body;
         await localNexusSystem.recordLearningExperience(
@@ -390,7 +422,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
       }
     });
 
-    router.post("/api/nexus/goal/enhanced", async (req: Request, res: Response) => {
+    router.post("/api/nexus/goal/enhanced", requireAuth, async (req: Request, res: Response) => {
       try {
         const { goal, context, computeBudget } = req.body;
         const result = await localNexusSystem.executeGoalWithLearning(goal, context, computeBudget);

@@ -12,7 +12,10 @@ export const consciousnessModules = pgTable("consciousness_modules", {
   load: real("load").notNull(),
   metrics: json("metrics").$type<Record<string, string | number>>().notNull(),
   lastUpdated: timestamp("last_updated").defaultNow().notNull(),
-});
+}, (table) => ({
+  statusIdx: index("consciousness_modules_status_idx").on(table.status),
+  lastUpdatedIdx: index("consciousness_modules_last_updated_idx").on(table.lastUpdated),
+}));
 
 // System Metrics Table
 export const systemMetrics = pgTable("system_metrics", {
@@ -25,16 +28,22 @@ export const systemMetrics = pgTable("system_metrics", {
   modulesOnline: integer("modules_online").notNull(),
   totalModules: integer("total_modules").notNull(),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
-});
+}, (table) => ({
+  timestampIdx: index("system_metrics_timestamp_idx").on(table.timestamp),
+}));
 
-// Activity Events Table  
+// Activity Events Table
 export const activityEvents = pgTable("activity_events", {
   id: varchar("id").primaryKey(),
   type: varchar("type", { length: 50 }).notNull(),
   message: text("message").notNull(),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   moduleId: varchar("module_id", { length: 255 }),
-});
+}, (table) => ({
+  timestampIdx: index("activity_events_timestamp_idx").on(table.timestamp),
+  moduleIdIdx: index("activity_events_module_id_idx").on(table.moduleId),
+  typeIdx: index("activity_events_type_idx").on(table.type),
+}));
 
 // Safety Status Table
 export const safetyStatus = pgTable("safety_status", {
@@ -55,7 +64,10 @@ export const collaborationMessages = pgTable("collaboration_messages", {
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   requiresResponse: boolean("requires_response").notNull(),
   priority: varchar("priority", { length: 50 }).notNull(),
-});
+}, (table) => ({
+  timestampIdx: index("collaboration_messages_timestamp_idx").on(table.timestamp),
+  priorityIdx: index("collaboration_messages_priority_idx").on(table.priority),
+}));
 
 // Emergency Actions Table
 export const emergencyActions = pgTable("emergency_actions", {
@@ -76,7 +88,10 @@ export const costTracking = pgTable("cost_tracking", {
   cost: real("cost").notNull(),
   requestType: varchar("request_type", { length: 100 }).notNull(),
   details: json("details").$type<Record<string, string | number>>(),
-});
+}, (table) => ({
+  timestampIdx: index("cost_tracking_timestamp_idx").on(table.timestamp),
+  serviceIdx: index("cost_tracking_service_idx").on(table.service),
+}));
 
 // Conversation Memory Table for Temporal Consciousness
 export const conversationMemory = pgTable("conversation_memory", {
@@ -86,7 +101,10 @@ export const conversationMemory = pgTable("conversation_memory", {
   content: text("content").notNull(),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   metadata: json("metadata").$type<Record<string, string | number>>(),
-});
+}, (table) => ({
+  sessionIdIdx: index("conversation_memory_session_id_idx").on(table.sessionId),
+  timestampIdx: index("conversation_memory_timestamp_idx").on(table.timestamp),
+}));
 
 // Temporal Events for consciousness timeline
 export const temporalEvents = pgTable("temporal_events", {
