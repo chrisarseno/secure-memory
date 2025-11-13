@@ -18,6 +18,14 @@ import { ConsciousnessBridge } from "./consciousness-bridge";
 import { AICollaborationSystem } from "./ai-collaboration-system";
 import { setupAuth } from "./auth";
 import { DistributedConsciousnessSystem } from "./distributed";
+import { cache } from "./cache";
+import { closeDatabasePool } from "./db";
+import { initializeSentry, setupSentryMiddleware, setupSentryErrorHandler } from "./sentry";
+import { metricsMiddleware } from "./middleware/metrics";
+import { updateConsciousnessMetrics, websocketConnectionsActive } from "./metrics";
+
+// Initialize Sentry FIRST (before any other code)
+const sentryEnabled = initializeSentry();
 
 // Initialize structured logging with validated config
 const logger = pino({
@@ -33,6 +41,11 @@ const logger = pino({
 });
 
 const app = express();
+
+// Sentry request handler (must be first middleware)
+if (sentryEnabled) {
+  setupSentryMiddleware(app);
+}
 const server = createServer(app);
 const io = new SocketIOServer(server, {
   cors: {
@@ -113,6 +126,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Prometheus metrics tracking
+app.use(metricsMiddleware);
+
 // Apply rate limiters
 app.use('/api/', apiLimiter);
 app.use('/api/auth/', authLimiter);
@@ -143,6 +159,11 @@ setupAuth(app);
 
 // API Routes MUST come before static serving to avoid conflicts
 app.use(createRoutes(storage, localNexusSystem, collaborationSystem, distributedSystem));
+
+// Sentry error handler (must be after all routes, before error handlers)
+if (sentryEnabled) {
+  setupSentryErrorHandler(app);
+}
 
 // Serve frontend - Vite in development, static files in production
 if (process.env.NODE_ENV === "production") {
@@ -469,7 +490,24 @@ setInterval(async () => {
     };
 
     await storage.addMetrics(newMetrics);
-    
+
+    // Update Prometheus metrics
+    updateConsciousnessMetrics({
+      coherence: newMetrics.consciousnessCoherence,
+      creativeIntelligence: newMetrics.creativeIntelligence,
+      safetyCompliance: newMetrics.safetyCompliance,
+      learningEfficiency: newMetrics.learningEfficiency,
+      modulesOnline: newMetrics.modulesOnline,
+      totalModules: newMetrics.totalModules,
+      costPerHour: newMetrics.costPerHour,
+    });
+
+    // Update WebSocket connection metrics
+    const authenticatedConnections = Array.from(connectedClients.values()).filter(c => c.userId).length;
+    const unauthenticatedConnections = connectedClients.size - authenticatedConnections;
+    websocketConnectionsActive.set({ authenticated: 'true' }, authenticatedConnections);
+    websocketConnectionsActive.set({ authenticated: 'false' }, unauthenticatedConnections);
+
     // Broadcast to all connected clients
     io.emit("metrics-update", newMetrics);
 
@@ -537,6 +575,12 @@ const gracefulShutdown = async (signal: string) => {
     try {
       // Give active requests time to complete
       await new Promise(resolve => setTimeout(resolve, 5000));
+
+      // Close Redis connection
+      await cache.close();
+
+      // Close database connection pool
+      await closeDatabasePool();
 
       logger.info('✅ Graceful shutdown complete');
       process.exit(0);
