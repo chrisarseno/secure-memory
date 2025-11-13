@@ -90,7 +90,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
     try {
       // Validate update data
       const updates = updateModuleSchema.parse(req.body);
-      const module = await storage.updateModule(req.params.id, updates);
+      const module = await storage.updateModule(req.params.id, updates as any);
 
       if (!module) {
         return res.status(404).json(
@@ -216,7 +216,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
           if (localNexusSystem && localNexusSystem.getAIService) {
             const aiService = localNexusSystem.getAIService();
             const models = aiService.getAvailableModels();
-            return Array.from(models.entries()).map(([id, model]: [string, any]) => ({
+            return Array.from(models.entries() as Iterable<[string, any]>).map(([id, model]) => ({
               id,
               name: model.name,
               type: model.type,
