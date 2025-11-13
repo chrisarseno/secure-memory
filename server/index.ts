@@ -4,9 +4,12 @@ import { Server as SocketIOServer } from "socket.io";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import compression from "compression";
 import pino from "pino";
 import pinoHttp from "pino-http";
 import path from "path";
+import { v4 as uuidv4 } from "uuid";
+import { env } from "./env";
 import { DatabaseStorage } from "./database-storage";
 import { createRoutes } from "./routes";
 import { setupVite } from "./vite";
@@ -16,17 +19,17 @@ import { AICollaborationSystem } from "./ai-collaboration-system";
 import { setupAuth } from "./auth";
 import { DistributedConsciousnessSystem } from "./distributed";
 
-// Initialize structured logging
+// Initialize structured logging with validated config
 const logger = pino({
-  level: process.env.LOG_LEVEL || 'info',
-  transport: {
+  level: env.LOG_LEVEL,
+  transport: env.NODE_ENV === 'development' ? {
     target: 'pino-pretty',
     options: {
       colorize: true,
       ignore: 'pid,hostname',
       translateTime: 'SYS:standard'
     }
-  }
+  } : undefined, // JSON in production
 });
 
 const app = express();
@@ -46,13 +49,13 @@ const collaborationSystem = new AICollaborationSystem(localNexusSystem.getAIServ
 // Initialize Distributed Consciousness System
 const distributedSystem = new DistributedConsciousnessSystem(
   {
-    nodeId: `nexus-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    nodeId: `nexus-${uuidv4()}`,
     address: '0.0.0.0',
     port: 5001, // Different port for node communication
     capabilities: ['consciousness-processing', 'ai-collaboration', 'multi-modal-processing'],
     consciousnessModules: [
       'global_workspace',
-      'social_cognition', 
+      'social_cognition',
       'temporal_consciousness',
       'value_learning',
       'virtue_learning',
@@ -86,10 +89,10 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false, // Required for Vite HMR
 }));
 
-// Rate limiting for API routes
+// Rate limiting for API routes (configured from env)
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: env.RATE_LIMIT_WINDOW_MS,
+  max: env.RATE_LIMIT_MAX_REQUESTS,
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -102,14 +105,36 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
 });
 
+// Request correlation IDs for distributed tracing
+app.use((req, res, next) => {
+  const requestId = (req.headers['x-request-id'] as string) || uuidv4();
+  req.id = requestId;
+  res.setHeader('x-request-id', requestId);
+  next();
+});
+
 // Apply rate limiters
 app.use('/api/', apiLimiter);
 app.use('/api/auth/', authLimiter);
 
-// Request logging
-app.use(pinoHttp({ logger }));
+// Request logging with correlation IDs
+app.use(pinoHttp({
+  logger,
+  customProps: (req) => ({
+    requestId: req.id,
+  }),
+}));
 
-app.use(cors());
+// Enable response compression
+app.use(compression({
+  threshold: 1024, // Only compress responses > 1KB
+  level: 6, // Compression level (0-9)
+}));
+
+app.use(cors({
+  origin: env.CORS_ORIGIN,
+  credentials: true,
+}));
 app.use(express.json({ limit: '10mb' })); // Add size limit
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -135,9 +160,20 @@ if (process.env.NODE_ENV === "production") {
 // Enhanced Socket.IO for real-time collaboration and monitoring
 const connectedClients = new Map<string, { userId: string | null; subscriptions: Set<string> }>();
 
+// WebSocket authentication middleware
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  const sessionId = socket.handshake.auth.sessionId;
+
+  // For now, allow connection but mark as unauthenticated
+  // Actual auth happens on "authenticate" event
+  logger.info({ socketId: socket.id }, 'WebSocket connection attempt');
+  next();
+});
+
 io.on("connection", (socket) => {
-  console.log("🔗 Client connected to NEXUS collaboration system:", socket.id);
-  
+  logger.info({ socketId: socket.id }, '🔗 Client connected to NEXUS collaboration system');
+
   // Initialize client state
   connectedClients.set(socket.id, { userId: null, subscriptions: new Set() });
 
@@ -147,7 +183,7 @@ io.on("connection", (socket) => {
     message: "Connected to NEXUS Unified System",
     capabilities: [
       "consciousness_monitoring",
-      "collaborative_learning", 
+      "collaborative_learning",
       "knowledge_sharing",
       "multi_modal_processing",
       "real_time_metrics"
@@ -161,10 +197,11 @@ io.on("connection", (socket) => {
       if (client) {
         client.userId = data.userId;
         socket.emit("auth-success", { message: "Authenticated for advanced features" });
-        console.log(`✅ Client ${socket.id} authenticated as ${data.userId}`);
+        logger.info({ socketId: socket.id, userId: data.userId }, '✅ Client authenticated');
       }
     } else {
       socket.emit("auth-failed", { message: "Unauthorized access" });
+      logger.warn({ socketId: socket.id, userId: data.userId }, '⚠️  Failed authentication attempt');
     }
   });
 
@@ -474,17 +511,59 @@ setInterval(async () => {
   }
 }, 5000); // Update every 5 seconds
 
-// Vite setup moved above API routes
-
 // Initialize consciousness bridge
 consciousnessBridge.initialize();
 
 // Start autonomous NEXUS learning with local models
-console.log("🤖 Local NEXUS System initialized");
+logger.info('🤖 Local NEXUS System initialized');
 
-const PORT = parseInt(process.env.PORT || "5000", 10);
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 NEXUS (NEXUS Unified System) running on http://0.0.0.0:${PORT}`);
-  console.log(`💰 Local compute cost tracking enabled`);
-  console.log(`🏠 100% Local AI - No external dependencies`);
+server.listen(env.PORT, "0.0.0.0", () => {
+  logger.info(`🚀 NEXUS (NEXUS Unified System) running on http://0.0.0.0:${env.PORT}`);
+  logger.info(`📊 Environment: ${env.NODE_ENV}`);
+  logger.info(`🔒 Security: Helmet enabled, Rate limiting active`);
+  logger.info(`📝 Logging level: ${env.LOG_LEVEL}`);
+  logger.info(`💰 Local compute cost tracking enabled`);
+  logger.info(`🏠 100% Local AI - No external dependencies`);
+});
+
+// Graceful shutdown handling
+const gracefulShutdown = async (signal: string) => {
+  logger.info(`${signal} received, starting graceful shutdown...`);
+
+  // Stop accepting new connections
+  server.close(async () => {
+    logger.info('✅ HTTP server closed');
+
+    try {
+      // Give active requests time to complete
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      logger.info('✅ Graceful shutdown complete');
+      process.exit(0);
+    } catch (error) {
+      logger.error({ error }, 'Error during shutdown');
+      process.exit(1);
+    }
+  });
+
+  // Force exit after 30 seconds
+  setTimeout(() => {
+    logger.error('❌ Forced shutdown after timeout');
+    process.exit(1);
+  }, 30000);
+};
+
+// Handle shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  logger.fatal({ error }, 'Uncaught exception');
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.fatal({ reason, promise }, 'Unhandled rejection');
+  process.exit(1);
 });
