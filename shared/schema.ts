@@ -36,7 +36,7 @@ export type SystemMetrics = z.infer<typeof systemMetricsSchema>;
 // Activity Feed
 export const activityEventSchema = z.object({
   id: z.string(),
-  type: z.enum(["virtue", "creative", "social", "temporal", "knowledge", "safety", "error"]),
+  type: z.enum(["virtue", "creative", "social", "temporal", "knowledge", "safety", "error", "learning", "system"]),
   message: z.string(),
   timestamp: z.string(),
   moduleId: z.string().optional(),

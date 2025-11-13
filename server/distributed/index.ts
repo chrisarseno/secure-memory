@@ -253,6 +253,7 @@ export {
   InterNodeCommunication, 
   DistributedConsciousnessManager 
 };
-export type { ConsciousnessNode, ConsciousnessPartition } from './node-registry';
+export type { ConsciousnessNode } from './node-registry';
+export type { ConsciousnessPartition } from './distributed-consciousness-manager';
 export type { ConsciousnessStateProposal } from './consciousness-consensus';
 export type { NodeMessage } from './inter-node-communication';
