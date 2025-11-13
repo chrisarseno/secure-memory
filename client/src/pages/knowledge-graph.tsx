@@ -9,12 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Bell, DollarSign, Search, Filter, Brain, Database, Network, Zap } from "lucide-react";
 import { useConsciousness } from "@/hooks/use-consciousness";
+import type { KnowledgeGraph } from "../../../shared/schema";
 
 export default function KnowledgeGraph() {
   const [searchTerm, setSearchTerm] = useState("");
   const { metrics, connectionStatus } = useConsciousness();
 
-  const { data: graphData } = useQuery({
+  const { data: graphData } = useQuery<KnowledgeGraph>({
     queryKey: ['/api/knowledge-graph'],
     refetchInterval: 30000,
   });

@@ -29,7 +29,7 @@ export function useConsciousness() {
   }, [socket]);
 
   // Fetch initial metrics
-  const { data: initialMetrics, isLoading: metricsLoading } = useQuery({
+  const { data: initialMetrics, isLoading: metricsLoading } = useQuery<SystemMetrics>({
     queryKey: ['/api/metrics'],
     refetchInterval: 10000,
   });

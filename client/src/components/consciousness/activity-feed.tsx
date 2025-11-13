@@ -16,7 +16,7 @@ export default function ActivityFeed({ limit = 10, showHeader = true, className 
   const { socket } = useWebSocket();
 
   // Fetch initial activities
-  const { data: initialActivities } = useQuery({
+  const { data: initialActivities } = useQuery<ActivityEvent[]>({
     queryKey: ['/api/activities'],
     refetchInterval: 30000,
   });

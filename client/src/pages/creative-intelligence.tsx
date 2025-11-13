@@ -9,12 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Bell, DollarSign, Lightbulb, Palette, Zap, Brain, Sparkles, Target, TrendingUp } from "lucide-react";
 import { useConsciousness } from "@/hooks/use-consciousness";
+import type { ConsciousnessModule } from "../../../shared/schema";
 
 export default function CreativeIntelligence() {
   const [searchTerm, setSearchTerm] = useState("");
   const { metrics, connectionStatus } = useConsciousness();
 
-  const { data: modules } = useQuery({
+  const { data: modules } = useQuery<ConsciousnessModule[]>({
     queryKey: ['/api/modules'],
     refetchInterval: 30000,
   });

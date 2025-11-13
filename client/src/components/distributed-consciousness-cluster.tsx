@@ -86,7 +86,8 @@ export function DistributedConsciousnessCluster() {
 
   const fetchSystemStatus = async () => {
     try {
-      const status = await apiRequest('/api/distributed/status');
+      const response = await apiRequest('/api/distributed/status');
+      const status = await response.json();
       setSystemStatus(status);
     } catch (error) {
       console.error('Failed to fetch distributed system status:', error);
@@ -95,7 +96,8 @@ export function DistributedConsciousnessCluster() {
 
   const fetchNodes = async () => {
     try {
-      const nodeList = await apiRequest('/api/distributed/nodes');
+      const response = await apiRequest('/api/distributed/nodes');
+      const nodeList = await response.json();
       setNodes(nodeList);
     } catch (error) {
       console.error('Failed to fetch cluster nodes:', error);

@@ -1,6 +1,7 @@
 import { IStorage } from './storage';
 import { db } from './db';
 import { eq, desc, gt } from 'drizzle-orm';
+import { v4 as uuidv4 } from 'uuid';
 import * as schema from '../shared/db-schema';
 import { ConsciousnessModule, SystemMetrics, ActivityEvent, SafetyStatus, KnowledgeGraph, CollaborationMessage, EmergencyAction } from '../shared/schema';
 
@@ -240,7 +241,7 @@ export class DatabaseStorage implements IStorage {
     const [newMetrics] = await db
       .insert(schema.systemMetrics)
       .values({
-        id: Date.now().toString(),
+        id: uuidv4(),
         ...metrics,
       })
       .returning();
@@ -297,7 +298,7 @@ export class DatabaseStorage implements IStorage {
     const [newActivity] = await db
       .insert(schema.activityEvents)
       .values({
-        id: Date.now().toString(),
+        id: uuidv4(),
         ...activity,
       })
       .returning();
@@ -330,7 +331,7 @@ export class DatabaseStorage implements IStorage {
     const [newStatus] = await db
       .insert(schema.safetyStatus)
       .values({
-        id: Date.now().toString(),
+        id: uuidv4(),
         ...status,
       })
       .returning();
@@ -404,7 +405,7 @@ export class DatabaseStorage implements IStorage {
     const [newMessage] = await db
       .insert(schema.collaborationMessages)
       .values({
-        id: Date.now().toString(),
+        id: uuidv4(),
         ...message,
       })
       .returning();
@@ -423,7 +424,7 @@ export class DatabaseStorage implements IStorage {
     const [newAction] = await db
       .insert(schema.emergencyActions)
       .values({
-        id: Date.now().toString(),
+        id: uuidv4(),
         ...action,
       })
       .returning();

@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { AlertTriangle, Shield, StopCircle, PlayCircle, PauseCircle } from "lucide-react";
 import { ConsciousnessAPI } from "@/lib/consciousness-api";
 import { useToast } from "@/hooks/use-toast";
+import type { SafetyStatus } from "../../../../shared/schema";
 
 interface SafetyStatusProps {
   showEmergencyControls?: boolean;
@@ -16,7 +17,7 @@ export default function SafetyStatus({ showEmergencyControls = true, className =
   const queryClient = useQueryClient();
 
   // Fetch safety status
-  const { data: safetyStatus, isLoading } = useQuery({
+  const { data: safetyStatus, isLoading } = useQuery<SafetyStatus>({
     queryKey: ['/api/safety'],
     queryFn: ConsciousnessAPI.getSafetyStatus,
     refetchInterval: 5000, // More frequent updates for safety

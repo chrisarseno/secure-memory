@@ -11,12 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Bell, DollarSign, Cpu, Zap, Network } from "lucide-react";
 import { useConsciousness } from "@/hooks/use-consciousness";
+import type { ConsciousnessModule } from "../../../shared/schema";
 
 export default function ConsciousnessCore() {
   const [showAllModules, setShowAllModules] = useState(false);
   const { metrics, connectionStatus } = useConsciousness();
 
-  const { data: modules } = useQuery({
+  const { data: modules } = useQuery<ConsciousnessModule[]>({
     queryKey: ['/api/modules'],
     refetchInterval: 30000,
   });
