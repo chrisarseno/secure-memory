@@ -1,6 +1,8 @@
 import express, { type Request, Response } from "express";
 import { IStorage } from "./storage";
 import { insertActivityEventSchema, insertCollaborationMessageSchema, emergencyActionSchema } from "../shared/schema";
+import { updateModuleSchema } from "../shared/update-schemas";
+import { successResponse, errorResponse, ErrorCode } from "./lib/response";
 import { z } from "zod";
 import { requireAuth } from "./auth";
 
@@ -64,11 +66,26 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
 
   router.patch("/api/modules/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const updates = req.body;
+      // Validate update data
+      const updates = updateModuleSchema.parse(req.body);
       const module = await storage.updateModule(req.params.id, updates);
-      res.json(module);
+
+      if (!module) {
+        return res.status(404).json(
+          errorResponse('Module not found', ErrorCode.MODULE_NOT_FOUND, null, req.id)
+        );
+      }
+
+      res.json(successResponse(module, undefined, req.id));
     } catch (error) {
-      res.status(500).json({ error: "Failed to update module" });
+      if (error instanceof z.ZodError) {
+        return res.status(400).json(
+          errorResponse('Invalid update data', ErrorCode.VALIDATION_ERROR, error.errors, req.id)
+        );
+      }
+      res.status(500).json(
+        errorResponse('Failed to update module', ErrorCode.MODULE_UPDATE_FAILED, undefined, req.id)
+      );
     }
   });
 

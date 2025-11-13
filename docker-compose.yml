@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  nexus:
+    build: .
+    container_name: nexus-system
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql://nexus:nexus_password@db:5432/nexus_db
+      - NODE_ENV=production
+      - SESSION_SECRET=${SESSION_SECRET:-change-this-secret-in-production}
+      - LOG_LEVEL=info
+      - REDIS_URL=redis://redis:6379
+      - ENABLE_REDIS_CACHE=true
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); })"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  db:
+    image: postgres:15-alpine
+    container_name: nexus-db
+    environment:
+      - POSTGRES_DB=nexus_db
+      - POSTGRES_USER=nexus
+      - POSTGRES_PASSWORD=nexus_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  postgres_data:
+  redis_data:
