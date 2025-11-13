@@ -274,7 +274,7 @@ export default function KnowledgeGraphVisualization() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-green-600" data-testid="metric-confidence">
-              {(graphData?.metrics.avgConfidence * 100 || 0).toFixed(1)}%
+              {((graphData?.metrics?.avgConfidence ?? 0) * 100).toFixed(1)}%
             </div>
             <div className="text-xs text-muted-foreground">Avg Confidence</div>
           </CardContent>

@@ -508,7 +508,11 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
           });
         }
 
-        const result = await localAI.analyzeImage(imageData, prompt);
+        if (!localNexusSystem || !localNexusSystem.getAIService) {
+          return res.status(503).json({ error: 'AI service not available' });
+        }
+        const aiService = localNexusSystem.getAIService();
+        const result = await aiService.analyzeImage(imageData, prompt);
         res.json({
           success: true,
           analysis: result.content,
@@ -538,8 +542,12 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
           });
         }
 
+        if (!localNexusSystem || !localNexusSystem.getAIService) {
+          return res.status(503).json({ error: 'AI service not available' });
+        }
+        const aiService = localNexusSystem.getAIService();
         const audioBuffer = Buffer.from(audioData, 'base64');
-        const result = await localAI.transcribeAudio(audioBuffer, format || 'wav');
+        const result = await aiService.transcribeAudio(audioBuffer, format || 'wav');
         
         res.json({
           success: true,
@@ -570,7 +578,11 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
           });
         }
 
-        const result = await localAI.analyzeDocument(content, docType || 'text');
+        if (!localNexusSystem || !localNexusSystem.getAIService) {
+          return res.status(503).json({ error: 'AI service not available' });
+        }
+        const aiService = localNexusSystem.getAIService();
+        const result = await aiService.analyzeDocument(content, docType || 'text');
         
         res.json({
           success: true,

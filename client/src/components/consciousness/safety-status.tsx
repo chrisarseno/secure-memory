@@ -25,7 +25,7 @@ export default function SafetyStatus({ showEmergencyControls = true, className =
 
   // Emergency actions
   const emergencyActionMutation = useMutation({
-    mutationFn: (action: { action: string; reason: string }) => 
+    mutationFn: (action: { action: "pause" | "stop" | "quarantine" | "override"; reason: string }) =>
       ConsciousnessAPI.executeEmergencyAction(action),
     onSuccess: (data) => {
       const actionLabels: Record<string, string> = {
