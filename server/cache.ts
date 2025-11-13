@@ -11,7 +11,7 @@ export class CacheService {
 
     if (this.isEnabled) {
       try {
-        this.redis = new Redis(env.REDIS_URL, {
+        this.redis = new Redis(env.REDIS_URL!, {
           maxRetriesPerRequest: 3,
           retryStrategy: (times) => {
             if (times > 3) {

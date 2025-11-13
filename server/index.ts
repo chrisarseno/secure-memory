@@ -29,7 +29,7 @@ import { wrapMiddleware, requireWebSocketAuth, getSocketUser } from "./lib/webso
 const sentryEnabled = initializeSentry();
 
 // Initialize structured logging with validated config
-const logger = pino({
+export const logger = pino({
   level: env.LOG_LEVEL,
   transport: env.NODE_ENV === 'development' ? {
     target: 'pino-pretty',
