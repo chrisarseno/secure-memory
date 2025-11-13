@@ -78,7 +78,7 @@ export function initializeSentry() {
 // Express middleware for Sentry
 export function setupSentryMiddleware(app: Express) {
   // Request handler must be the first middleware
-  app.use(Sentry.setupExpressErrorHandler(app));
+  app.use(Sentry.setupExpressErrorHandler() as any);
 }
 
 // Error handler middleware (must be added AFTER all routes)
