@@ -2,6 +2,10 @@ import express from "express";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import pino from "pino";
+import pinoHttp from "pino-http";
 import path from "path";
 import { DatabaseStorage } from "./database-storage";
 import { createRoutes } from "./routes";
@@ -11,6 +15,19 @@ import { ConsciousnessBridge } from "./consciousness-bridge";
 import { AICollaborationSystem } from "./ai-collaboration-system";
 import { setupAuth } from "./auth";
 import { DistributedConsciousnessSystem } from "./distributed";
+
+// Initialize structured logging
+const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  transport: {
+    target: 'pino-pretty',
+    options: {
+      colorize: true,
+      ignore: 'pid,hostname',
+      translateTime: 'SYS:standard'
+    }
+  }
+});
 
 const app = express();
 const server = createServer(app);
@@ -51,8 +68,50 @@ const distributedSystem = new DistributedConsciousnessSystem(
   storage
 );
 
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Allow Vite in dev
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "ws:", "wss:"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Required for Vite HMR
+}));
+
+// Rate limiting for API routes
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit auth attempts
+  message: 'Too many authentication attempts, please try again later.',
+  skipSuccessfulRequests: true,
+});
+
+// Apply rate limiters
+app.use('/api/', apiLimiter);
+app.use('/api/auth/', authLimiter);
+
+// Request logging
+app.use(pinoHttp({ logger }));
+
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Add size limit
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Setup authentication
 setupAuth(app);
