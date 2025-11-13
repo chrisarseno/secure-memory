@@ -12,8 +12,7 @@ const envSchema = z.object({
   PORT: z.string().default('5000').transform(Number),
   SESSION_SECRET: z
     .string()
-    .min(32, 'SESSION_SECRET must be at least 32 characters for security')
-    .default('nexus-dev-secret-change-in-production-please-use-strong-secret'),
+    .min(32, 'SESSION_SECRET must be at least 32 characters for security'),
 
   // Logging
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
@@ -63,13 +62,16 @@ export const env = (() => {
     throw new Error('Invalid environment configuration');
   }
 
-  // Warn about default secrets in production
+  // Warn about missing optional services in production
   if (result.data.NODE_ENV === 'production') {
-    if (result.data.SESSION_SECRET.includes('nexus-dev-secret')) {
-      console.warn('⚠️  WARNING: Using default SESSION_SECRET in production!');
-    }
     if (!result.data.OPENAI_API_KEY && !result.data.OLLAMA_HOST) {
       console.warn('⚠️  WARNING: No AI service configured (OPENAI_API_KEY or OLLAMA_HOST)');
+    }
+    if (!result.data.REDIS_URL) {
+      console.warn('⚠️  WARNING: Redis not configured - caching disabled');
+    }
+    if (!result.data.SENTRY_DSN) {
+      console.warn('⚠️  WARNING: Sentry not configured - error tracking disabled');
     }
   }
 

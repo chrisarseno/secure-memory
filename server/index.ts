@@ -16,13 +16,14 @@ import { setupVite } from "./vite";
 import { LocalNEXUSSystem } from "./sage/local-sage-system";
 import { ConsciousnessBridge } from "./consciousness-bridge";
 import { AICollaborationSystem } from "./ai-collaboration-system";
-import { setupAuth } from "./auth";
+import { setupAuth, sessionMiddleware } from "./auth";
 import { DistributedConsciousnessSystem } from "./distributed";
 import { cache } from "./cache";
 import { closeDatabasePool } from "./db";
 import { initializeSentry, setupSentryMiddleware, setupSentryErrorHandler } from "./sentry";
 import { metricsMiddleware } from "./middleware/metrics";
 import { updateConsciousnessMetrics, websocketConnectionsActive } from "./metrics";
+import { wrapMiddleware, requireWebSocketAuth, getSocketUser } from "./lib/websocket-auth";
 
 // Initialize Sentry FIRST (before any other code)
 const sentryEnabled = initializeSentry();
@@ -52,6 +53,13 @@ const io = new SocketIOServer(server, {
     origin: "*",
     methods: ["GET", "POST"],
   },
+  // Security: Limit message size to prevent memory exhaustion
+  maxHttpBufferSize: 1024 * 1024, // 1MB max message size
+  // Connection timeout
+  connectTimeout: 45000, // 45 seconds
+  // Ping configuration for connection health
+  pingTimeout: 30000,
+  pingInterval: 25000,
 });
 
 const storage = new DatabaseStorage();
@@ -182,26 +190,42 @@ if (process.env.NODE_ENV === "production") {
 const connectedClients = new Map<string, { userId: string | null; subscriptions: Set<string> }>();
 
 // WebSocket authentication middleware
-io.use((socket, next) => {
-  const token = socket.handshake.auth.token;
-  const sessionId = socket.handshake.auth.sessionId;
+// Step 1: Share Express session with Socket.IO
+io.use(wrapMiddleware(sessionMiddleware));
 
-  // For now, allow connection but mark as unauthenticated
-  // Actual auth happens on "authenticate" event
-  logger.info({ socketId: socket.id }, 'WebSocket connection attempt');
-  next();
-});
+// Step 2: Require authentication for WebSocket connections
+io.use(requireWebSocketAuth);
 
 io.on("connection", (socket) => {
-  logger.info({ socketId: socket.id }, '🔗 Client connected to NEXUS collaboration system');
+  const user = getSocketUser(socket);
 
-  // Initialize client state
-  connectedClients.set(socket.id, { userId: null, subscriptions: new Set() });
+  if (!user) {
+    // This should never happen due to requireWebSocketAuth, but handle it anyway
+    logger.error({ socketId: socket.id }, '❌ Authenticated socket has no user data');
+    socket.disconnect(true);
+    return;
+  }
+
+  logger.info({
+    socketId: socket.id,
+    userId: user.id,
+    username: user.username
+  }, '🔗 Authenticated client connected to NEXUS');
+
+  // Initialize client state with authenticated user
+  connectedClients.set(socket.id, {
+    userId: user.id,
+    subscriptions: new Set()
+  });
 
   // Send initial connection data
   socket.emit("nexus-update", {
     type: "connection",
-    message: "Connected to NEXUS Unified System",
+    message: `Connected to NEXUS Unified System as ${user.username}`,
+    user: {
+      id: user.id,
+      username: user.username,
+    },
     capabilities: [
       "consciousness_monitoring",
       "collaborative_learning",
@@ -209,21 +233,6 @@ io.on("connection", (socket) => {
       "multi_modal_processing",
       "real_time_metrics"
     ]
-  });
-
-  // Authentication for protected features
-  socket.on("authenticate", (data) => {
-    if (data.userId === 'chris.mwd20') { // Single-user system
-      const client = connectedClients.get(socket.id);
-      if (client) {
-        client.userId = data.userId;
-        socket.emit("auth-success", { message: "Authenticated for advanced features" });
-        logger.info({ socketId: socket.id, userId: data.userId }, '✅ Client authenticated');
-      }
-    } else {
-      socket.emit("auth-failed", { message: "Unauthorized access" });
-      logger.warn({ socketId: socket.id, userId: data.userId }, '⚠️  Failed authentication attempt');
-    }
   });
 
   // Subscribe to consciousness monitoring
