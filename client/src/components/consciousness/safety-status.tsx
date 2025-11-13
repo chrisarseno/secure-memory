@@ -52,7 +52,7 @@ export default function SafetyStatus({ showEmergencyControls = true, className =
     },
   });
 
-  const executeEmergencyAction = (action: string, reason: string) => {
+  const executeEmergencyAction = (action: "pause" | "stop" | "quarantine" | "override", reason: string) => {
     const confirmMessages: Record<string, string> = {
       stop: 'Are you sure you want to emergency stop the AGI system? This will halt all consciousness processes.',
       pause: 'Are you sure you want to pause the AGI system?',

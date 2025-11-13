@@ -94,22 +94,22 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
 
       if (!module) {
         return res.status(404).json(
-          errorResponse('Module not found', ErrorCode.MODULE_NOT_FOUND, null, req.id)
+          errorResponse('Module not found', ErrorCode.MODULE_NOT_FOUND, null, String(req.id))
         );
       }
 
       // Invalidate modules cache
       await invalidateCache('modules:*');
 
-      res.json(successResponse(module, undefined, req.id));
+      res.json(successResponse(module, undefined, String(req.id)));
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json(
-          errorResponse('Invalid update data', ErrorCode.VALIDATION_ERROR, error.errors, req.id)
+          errorResponse('Invalid update data', ErrorCode.VALIDATION_ERROR, error.errors, String(req.id))
         );
       }
       res.status(500).json(
-        errorResponse('Failed to update module', ErrorCode.MODULE_UPDATE_FAILED, undefined, req.id)
+        errorResponse('Failed to update module', ErrorCode.MODULE_UPDATE_FAILED, undefined, String(req.id))
       );
     }
   });
@@ -216,7 +216,7 @@ export function createRoutes(storage: IStorage, localNexusSystem?: any, collabor
           if (localNexusSystem && localNexusSystem.getAIService) {
             const aiService = localNexusSystem.getAIService();
             const models = aiService.getAvailableModels();
-            return Array.from(models.entries()).map(([id, model]) => ({
+            return Array.from(models.entries()).map(([id, model]: [string, any]) => ({
               id,
               name: model.name,
               type: model.type,

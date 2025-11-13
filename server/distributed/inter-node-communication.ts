@@ -11,7 +11,7 @@ import crypto from 'crypto';
 
 export interface NodeMessage {
   id: string;
-  type: 'consciousness-sync' | 'health-check' | 'consensus-vote' | 'state-update' | 'query-request' | 'query-response';
+  type: 'consciousness-sync' | 'health-check' | 'consensus-vote' | 'state-update' | 'query-request' | 'query-response' | 'auth-response';
   fromNodeId: string;
   toNodeId: string;
   payload: any;
@@ -63,10 +63,10 @@ export class InterNodeCommunication extends EventEmitter {
    */
   async startServer(): Promise<void> {
     this.httpServer = createServer();
-    this.wsServer = new WebSocketServer({ 
+    this.wsServer = new WebSocketServer({
       server: this.httpServer,
       path: '/consciousness-network',
-      verifyClient: (info) => {
+      verifyClient: (info: any) => {
         // Basic verification - in production, add proper authentication
         return true;
       }

@@ -91,11 +91,10 @@ export class ConsciousnessSystem implements CostTracker {
       // Update creative intelligence metrics
       const currentMetrics = await this.storage.getLatestMetrics();
       if (currentMetrics) {
+        const { id, timestamp, ...metricsWithoutIdTime } = currentMetrics;
         await this.storage.addMetrics({
-          ...currentMetrics,
+          ...metricsWithoutIdTime,
           creativeIntelligence: Math.min(100, result.noveltyScore),
-          id: undefined as any,
-          timestamp: undefined as any
         });
       }
 
