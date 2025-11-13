@@ -29,6 +29,9 @@ const envSchema = z.object({
     .default('false')
     .transform((val) => val === 'true'),
 
+  // Optional Monitoring
+  SENTRY_DSN: z.string().url().optional(),
+
   // Optional Feature Flags
   ENABLE_DISTRIBUTED_SYSTEM: z
     .string()
