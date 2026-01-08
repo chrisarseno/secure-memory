@@ -19,13 +19,11 @@ import {
   SessionConfig,
   Learning,
   PipelineSignal,
-  ExecutionMetrics,
 } from './types';
 
 import {
   createConsciousnessContext,
   applyLearnings,
-  getConsciousnessSummary,
 } from './consciousness-context';
 
 import {
@@ -34,11 +32,9 @@ import {
   validateHandoff,
   enrichHandoffWithConsciousness,
   shouldContinuePipeline,
-  getTrailSummary,
-  createLearningFromOutput,
 } from './handoff-protocol';
 
-import { SessionLearner, createSessionLearner } from './session-learner';
+import { createSessionLearner } from './session-learner';
 
 export interface PipelineConfig {
   /** Session configuration */

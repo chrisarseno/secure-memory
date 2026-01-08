@@ -15,7 +15,6 @@ import {
   ConsciousnessUpdater,
   AwarenessItem,
   TemporalEvent,
-  TemporalPattern,
   Insight,
   Learning,
 } from './types';

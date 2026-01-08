@@ -52,7 +52,7 @@ export function createHandoff(
   toAgent: string,
   previousContext: HandoffContext,
   agentOutput: AgentOutput,
-  executionTime: number
+  _executionTime: number
 ): HandoffContext {
   // Create trail entry for the completing agent
   const trailEntry: AgentTrailEntry = {

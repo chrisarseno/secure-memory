@@ -44,13 +44,6 @@ interface AgentPerformanceRecord {
   recentResults: boolean[]; // Last 5 results
 }
 
-interface RoutingAdjustment {
-  fromAgent: string;
-  toAgent: string;
-  reason: string;
-  appliedAt: number;
-}
-
 /**
  * Session Learner - tracks and improves performance within a session
  */
@@ -246,13 +239,6 @@ export class SessionLearner {
    */
   getState(): SessionLearnerState {
     const records = Array.from(this.agentPerformance.values());
-    const avgSuccessRate =
-      records.length > 0
-        ? records.reduce(
-            (sum, r) => sum + (r.executions > 0 ? r.successes / r.executions : 0),
-            0
-          ) / records.length
-        : 0;
 
     // Determine trend
     let trend: 'improving' | 'stable' | 'declining' = 'stable';
