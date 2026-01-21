@@ -12,8 +12,8 @@ import { getMetrics, getMetricsContentType } from "./metrics";
 export function createRoutes(storage: IStorage, localNexusSystem?: any, collaborationSystem?: any, distributedSystem?: any) {
   const router = express.Router();
 
-  // Prometheus metrics endpoint
-  router.get("/metrics", async (req: Request, res: Response) => {
+  // Prometheus metrics endpoint - REQUIRE AUTHENTICATION
+  router.get("/metrics", requireAdmin, async (req: Request, res: Response) => {
     try {
       const metrics = await getMetrics();
       res.setHeader('Content-Type', getMetricsContentType());

@@ -42,9 +42,10 @@ const envSchema = z.object({
     .transform((val) => val === 'true'),
 
   // Security
-  CORS_ORIGIN: z.string().default('*'),
+  CORS_ORIGIN: z.string().default('http://localhost:5000'),
   RATE_LIMIT_WINDOW_MS: z.string().default('900000').transform(Number), // 15 minutes
   RATE_LIMIT_MAX_REQUESTS: z.string().default('100').transform(Number),
+  ADMIN_PASSWORD: z.string().min(8, 'ADMIN_PASSWORD must be at least 8 characters'),
 });
 
 export type Env = z.infer<typeof envSchema>;

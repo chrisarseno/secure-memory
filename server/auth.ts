@@ -83,9 +83,15 @@ export function setupAuth(app: Express) {
   // Simple session-based authentication - no passport needed
 
   // Email verification endpoint - now handles full authentication
-  app.post('/api/auth/verify-username', (req, res) => {
-    const { username } = req.body;
-    if (username === 'chris.mwd20@gmail.com') {
+  app.post('/api/auth/verify-username', authLimiter, (req, res) => {
+    const { username, password } = req.body;
+    
+    // Validate input
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+    
+    if (username === 'chris.mwd20@gmail.com' && password === process.env.ADMIN_PASSWORD) {
       req.session.authenticated = true;
       req.session.user = {
         id: '1',
@@ -96,7 +102,7 @@ export function setupAuth(app: Express) {
       };
       res.json({ success: true, redirect: '/dashboard' });
     } else {
-      res.status(401).json({ error: 'Invalid email address' });
+      res.status(401).json({ error: 'Invalid username or password' });
     }
   });
 
